@@ -1,7 +1,11 @@
 package com.exapps.anistream.presentation.dashboard
 
+import androidx.compose.foundation.Image
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.ExperimentalLayoutApi
+import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
@@ -18,6 +22,7 @@ import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.FilterChip
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
@@ -28,18 +33,23 @@ import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import androidx.compose.foundation.Image
 import com.exapps.anistream.R
 import com.exapps.anistream.domain.model.AnimeCard
+import com.exapps.anistream.domain.model.CatalogSort
 import com.exapps.anistream.domain.model.EpisodeCard
+import com.exapps.anistream.domain.model.PlaybackHistory
+import com.exapps.anistream.domain.model.SortDirection
 import com.exapps.anistream.presentation.components.EpisodePosterCard
 import com.exapps.anistream.presentation.components.SectionTitle
 import com.exapps.anistream.presentation.components.TitlePosterCard
+import com.exapps.anistream.presentation.components.TitleSummaryCard
 
 @Composable
-@OptIn(ExperimentalMaterial3Api::class)
+@OptIn(ExperimentalMaterial3Api::class, ExperimentalLayoutApi::class)
 fun DashboardScreen(
     viewModel: DashboardViewModel,
     onOpenDetails: (String) -> Unit,
@@ -51,12 +61,24 @@ fun DashboardScreen(
         topBar = {
             TopAppBar(
                 title = {
+                    Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
+                        Text(text = stringResource(id = R.string.nav_home), style = MaterialTheme.typography.titleLarge)
+                        Text(
+                            text = stringResource(id = R.string.home_search_supporting),
+                            style = MaterialTheme.typography.bodySmall,
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis,
+                        )
+                    }
+                },
+                actions = {
                     Image(
                         painter = painterResource(id = R.drawable.anistream_logo),
-                        contentDescription = "AniStream",
+                        contentDescription = stringResource(id = R.string.app_name),
                         modifier = Modifier
                             .height(36.dp)
-                            .width(36.dp),
+                            .width(36.dp)
+                            .padding(end = 8.dp),
                         contentScale = ContentScale.Fit,
                     )
                 },
@@ -77,24 +99,49 @@ fun DashboardScreen(
                     modifier = Modifier.fillMaxWidth(),
                     shape = RoundedCornerShape(20.dp),
                     singleLine = true,
-                    label = { Text("Search Anime3rb") },
+                    label = { Text(stringResource(id = R.string.home_search_label)) },
                     supportingText = {
-                        Text("Powered by the locally verified Anime3rb HTML structure.")
+                        Text(stringResource(id = R.string.home_search_supporting))
                     },
                 )
             }
 
+            item {
+                SectionTitle(title = stringResource(id = R.string.catalog_sort_label))
+                Spacer(modifier = Modifier.height(10.dp))
+                FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                    CatalogSort.entries.forEach { sort ->
+                        FilterChip(
+                            selected = state.catalogFilters.sort == sort,
+                            onClick = { viewModel.onCatalogSortSelected(sort) },
+                            label = { Text(sort.label()) },
+                        )
+                    }
+                    FilterChip(
+                        selected = true,
+                        onClick = viewModel::onCatalogDirectionToggle,
+                        label = {
+                            Text(
+                                if (state.catalogFilters.direction == SortDirection.ASC) {
+                                    stringResource(id = R.string.catalog_sort_direction_asc)
+                                } else {
+                                    stringResource(id = R.string.catalog_sort_direction_desc)
+                                },
+                            )
+                        },
+                    )
+                }
+            }
+
             if (state.isLoading) {
                 item {
-                    Card(
-                        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
-                    ) {
+                    Card(colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface)) {
                         Column(
                             modifier = Modifier.padding(24.dp),
                             verticalArrangement = Arrangement.spacedBy(12.dp),
                         ) {
                             CircularProgressIndicator()
-                            Text("Loading AniStream home feed and catalog...")
+                            Text(stringResource(id = R.string.home_loading))
                         }
                     }
                 }
@@ -102,11 +149,7 @@ fun DashboardScreen(
 
             if (!state.errorMessage.isNullOrBlank()) {
                 item {
-                    Card(
-                        colors = CardDefaults.cardColors(
-                            containerColor = MaterialTheme.colorScheme.errorContainer,
-                        ),
-                    ) {
+                    Card(colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.errorContainer)) {
                         Column(
                             modifier = Modifier.padding(16.dp),
                             verticalArrangement = Arrangement.spacedBy(12.dp),
@@ -116,7 +159,7 @@ fun DashboardScreen(
                                 color = MaterialTheme.colorScheme.onErrorContainer,
                             )
                             Button(onClick = viewModel::refresh) {
-                                Text("Retry")
+                                Text(stringResource(id = R.string.action_retry))
                             }
                         }
                     }
@@ -126,41 +169,103 @@ fun DashboardScreen(
             if (state.searchQuery.isNotBlank()) {
                 item {
                     SectionTitle(
-                        title = if (state.isSearching) "Searching..." else "Search Results",
+                        title = if (state.isSearching) {
+                            stringResource(id = R.string.search_loading_title)
+                        } else {
+                            stringResource(id = R.string.search_results_title)
+                        },
                         subtitle = state.searchQuery,
                     )
                 }
+
+                if (!state.isSearching && state.searchResults.isEmpty()) {
+                    item {
+                        Text(stringResource(id = R.string.search_empty))
+                    }
+                }
+
                 items(state.searchResults, key = { it.slug }) { item ->
-                    SearchResultCard(item = item, onClick = { onOpenDetails(item.slug) })
+                    TitleSummaryCard(item = item, onClick = { onOpenDetails(item.slug) })
+                }
+
+                if (state.hasMoreSearchResults) {
+                    item {
+                        Button(
+                            onClick = viewModel::loadMoreSearchResults,
+                            modifier = Modifier.fillMaxWidth(),
+                        ) {
+                            if (state.isSearchLoadingMore) {
+                                CircularProgressIndicator(modifier = Modifier.width(20.dp), strokeWidth = 2.dp)
+                            } else {
+                                Text(stringResource(id = R.string.search_load_more))
+                            }
+                        }
+                    }
                 }
             } else {
+                if (state.continueWatching.isNotEmpty()) {
+                    item {
+                        SectionTitle(
+                            title = stringResource(id = R.string.section_continue_watching_title),
+                            subtitle = stringResource(id = R.string.section_continue_watching_subtitle),
+                        )
+                    }
+                    item {
+                        LazyRow(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                            items(state.continueWatching, key = { "${it.titleSlug}-${it.episodeNumber}" }) { item ->
+                                HistoryCardCompact(
+                                    item = item,
+                                    onClick = { onOpenEpisode(item.titleSlug, item.episodeNumber) },
+                                )
+                            }
+                        }
+                    }
+                }
+
                 homeSection(
-                    title = "Popular Now",
-                    subtitle = "Pinned episodes from Anime3rb home.html",
+                    title = stringResource(id = R.string.section_featured_title),
+                    subtitle = stringResource(id = R.string.section_featured_subtitle),
                     items = state.featuredEpisodes,
                     onClick = onOpenEpisode,
                 )
 
                 homeSection(
-                    title = "Latest Episodes",
-                    subtitle = "Exact `#videos a.video-card` extraction",
+                    title = stringResource(id = R.string.section_latest_episodes_title),
+                    subtitle = stringResource(id = R.string.section_latest_episodes_subtitle),
                     items = state.latestEpisodes,
                     onClick = onOpenEpisode,
                 )
 
                 titleSection(
-                    title = "Recently Added Titles",
-                    subtitle = "Exact `.title-card` slider extraction",
+                    title = stringResource(id = R.string.section_latest_titles_title),
+                    subtitle = stringResource(id = R.string.section_latest_titles_subtitle),
                     items = state.latestTitles,
                     onClick = onOpenDetails,
                 )
 
-                titleSection(
-                    title = "Catalog",
-                    subtitle = "Page 1 of `animelist.html`",
-                    items = state.catalog,
-                    onClick = onOpenDetails,
-                )
+                item {
+                    SectionTitle(
+                        title = stringResource(id = R.string.section_catalog_title),
+                        subtitle = stringResource(id = R.string.section_catalog_subtitle),
+                    )
+                }
+                items(state.catalog, key = { it.slug }) { item ->
+                    TitleSummaryCard(item = item, onClick = { onOpenDetails(item.slug) })
+                }
+                if (state.hasMoreCatalog) {
+                    item {
+                        Button(
+                            onClick = viewModel::loadMoreCatalog,
+                            modifier = Modifier.fillMaxWidth(),
+                        ) {
+                            if (state.isCatalogLoadingMore) {
+                                CircularProgressIndicator(modifier = Modifier.width(20.dp), strokeWidth = 2.dp)
+                            } else {
+                                Text(stringResource(id = R.string.action_load_more))
+                            }
+                        }
+                    }
+                }
             }
         }
     }
@@ -172,9 +277,7 @@ private fun androidx.compose.foundation.lazy.LazyListScope.homeSection(
     items: List<EpisodeCard>,
     onClick: (String, Int) -> Unit,
 ) {
-    item {
-        SectionTitle(title = title, subtitle = subtitle)
-    }
+    item { SectionTitle(title = title, subtitle = subtitle) }
     item {
         LazyRow(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
             items(items, key = { it.episodeUrl }) { item ->
@@ -190,9 +293,7 @@ private fun androidx.compose.foundation.lazy.LazyListScope.titleSection(
     items: List<AnimeCard>,
     onClick: (String) -> Unit,
 ) {
-    item {
-        SectionTitle(title = title, subtitle = subtitle)
-    }
+    item { SectionTitle(title = title, subtitle = subtitle) }
     item {
         LazyRow(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
             items(items, key = { it.slug }) { item ->
@@ -203,25 +304,46 @@ private fun androidx.compose.foundation.lazy.LazyListScope.titleSection(
 }
 
 @Composable
-private fun SearchResultCard(item: AnimeCard, onClick: () -> Unit) {
+private fun HistoryCardCompact(item: PlaybackHistory, onClick: () -> Unit) {
     Card(
-        modifier = Modifier.fillMaxWidth(),
-        shape = RoundedCornerShape(22.dp),
+        modifier = Modifier
+            .width(220.dp)
+            .clickable { onClick() },
+        shape = RoundedCornerShape(24.dp),
         colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
-        elevation = CardDefaults.cardElevation(defaultElevation = 3.dp),
+        elevation = CardDefaults.cardElevation(defaultElevation = 4.dp),
     ) {
-        Column(modifier = Modifier.padding(16.dp)) {
-            TitlePosterCard(item = item, onClick = { onClick() }, modifier = Modifier.fillMaxWidth())
-            if (!item.synopsis.isNullOrBlank()) {
-                Spacer(modifier = Modifier.height(10.dp))
+        Column(modifier = Modifier.padding(14.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+            Text(
+                text = item.animeTitle,
+                style = MaterialTheme.typography.titleSmall,
+                maxLines = 2,
+                overflow = TextOverflow.Ellipsis,
+            )
+            Text(
+                text = stringResource(id = R.string.episode_row_title, item.episodeNumber),
+                style = MaterialTheme.typography.labelLarge,
+                color = MaterialTheme.colorScheme.primary,
+            )
+            if (!item.episodeTitle.isNullOrBlank()) {
                 Text(
-                    text = item.synopsis.orEmpty(),
-                    style = MaterialTheme.typography.bodyMedium,
+                    text = item.episodeTitle.orEmpty(),
+                    style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    maxLines = 4,
-                    overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
                 )
             }
         }
+    }
+}
+
+@Composable
+private fun CatalogSort.label(): String {
+    return when (this) {
+        CatalogSort.ADDITION_DATE -> stringResource(id = R.string.catalog_sort_addition_date)
+        CatalogSort.NAME -> stringResource(id = R.string.catalog_sort_name)
+        CatalogSort.RELEASE_DATE -> stringResource(id = R.string.catalog_sort_release_date)
+        CatalogSort.RATE -> stringResource(id = R.string.catalog_sort_rate)
     }
 }

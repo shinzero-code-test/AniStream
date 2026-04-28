@@ -9,6 +9,9 @@ data class WatchlistAnimeEntity(
     val title: String,
     val posterUrl: String,
     val synopsis: String?,
+    val watchStatus: String,
+    val userRating: Int?,
+    val episodeCount: Int?,
     val updatedAt: Long,
 )
 

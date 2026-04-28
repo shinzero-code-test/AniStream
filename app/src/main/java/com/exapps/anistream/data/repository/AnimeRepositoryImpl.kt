@@ -7,10 +7,12 @@ import com.exapps.anistream.data.local.WatchlistDao
 import com.exapps.anistream.data.preferences.UserPreferencesDataSource
 import com.exapps.anistream.data.scraper.AnimeExtractor
 import com.exapps.anistream.domain.model.AnimeDetails
+import com.exapps.anistream.domain.model.CatalogFilters
 import com.exapps.anistream.domain.model.EpisodeStream
 import com.exapps.anistream.domain.model.HomeFeed
 import com.exapps.anistream.domain.model.PaginatedTitles
 import com.exapps.anistream.domain.model.PlaybackHistory
+import com.exapps.anistream.domain.model.WatchStatus
 import com.exapps.anistream.domain.model.WatchlistAnime
 import com.exapps.anistream.domain.repository.AnimeRepository
 import kotlinx.coroutines.flow.Flow
@@ -28,9 +30,13 @@ class AnimeRepositoryImpl @Inject constructor(
 
     override suspend fun getHomeFeed(): HomeFeed = extractor.getHomeFeed()
 
-    override suspend fun getCatalog(page: Int): PaginatedTitles = extractor.getCatalog(page)
+    override suspend fun getCatalog(page: Int, filters: CatalogFilters): PaginatedTitles {
+        return extractor.getCatalog(page, filters)
+    }
 
-    override suspend fun search(query: String, page: Int): PaginatedTitles = extractor.search(query, page)
+    override suspend fun search(query: String, page: Int, filters: CatalogFilters): PaginatedTitles {
+        return extractor.search(query, page, filters)
+    }
 
     override suspend fun getAnimeDetails(slug: String): AnimeDetails = extractor.getAnimeDetails(slug)
 
@@ -42,24 +48,49 @@ class AnimeRepositoryImpl @Inject constructor(
         return watchlistDao.observeAll().map { entities -> entities.map { it.toDomain() } }
     }
 
+    override fun observeWatchEntry(slug: String): Flow<WatchlistAnime?> {
+        return watchlistDao.observeBySlug(slug).map { it?.toDomain() }
+    }
+
     override fun observeIsWatchlisted(slug: String): Flow<Boolean> {
         return watchlistDao.observeBySlug(slug).map { it != null }
     }
 
     override suspend fun toggleWatchlist(details: AnimeDetails) {
-        if (watchlistDao.getBySlug(details.slug) != null) {
+        val existing = watchlistDao.getBySlug(details.slug)
+        if (existing != null) {
             watchlistDao.deleteBySlug(details.slug)
         } else {
-            watchlistDao.upsert(
-                WatchlistAnimeEntity(
-                    slug = details.slug,
-                    title = details.title,
-                    posterUrl = details.posterUrl,
-                    synopsis = details.summary ?: details.synopsis,
-                    updatedAt = System.currentTimeMillis(),
-                ),
-            )
+            watchlistDao.upsert(createEntity(details = details))
         }
+    }
+
+    override suspend fun setWatchStatus(details: AnimeDetails, status: WatchStatus) {
+        val existing = watchlistDao.getBySlug(details.slug)
+        watchlistDao.upsert(
+            createEntity(
+                details = details,
+                existing = existing,
+                watchStatus = status,
+            ),
+        )
+    }
+
+    override suspend fun setAnimeRating(details: AnimeDetails, rating: Int?) {
+        val existing = watchlistDao.getBySlug(details.slug)
+        if (existing == null && rating == null) return
+
+        watchlistDao.upsert(
+            createEntity(
+                details = details,
+                existing = existing,
+                userRating = rating,
+            ),
+        )
+    }
+
+    override suspend fun clearWatchlist() {
+        watchlistDao.clearAll()
     }
 
     override fun observeHistory(): Flow<List<PlaybackHistory>> {
@@ -92,6 +123,10 @@ class AnimeRepositoryImpl @Inject constructor(
         )
     }
 
+    override suspend fun clearHistory() {
+        historyDao.clearAll()
+    }
+
     override fun observePreferences() = preferencesDataSource.preferences
 
     override suspend fun setPreferSummary(enabled: Boolean) {
@@ -106,12 +141,37 @@ class AnimeRepositoryImpl @Inject constructor(
         preferencesDataSource.setAutoPlayNext(enabled)
     }
 
+    override suspend fun setDynamicColors(enabled: Boolean) {
+        preferencesDataSource.setDynamicColors(enabled)
+    }
+
+    private fun createEntity(
+        details: AnimeDetails,
+        existing: WatchlistAnimeEntity? = null,
+        watchStatus: WatchStatus = existing?.watchStatus?.let(WatchStatus::fromRawValue) ?: WatchStatus.PLAN_TO_WATCH,
+        userRating: Int? = existing?.userRating,
+    ): WatchlistAnimeEntity {
+        return WatchlistAnimeEntity(
+            slug = details.slug,
+            title = details.title,
+            posterUrl = details.posterUrl,
+            synopsis = details.summary ?: details.synopsis,
+            watchStatus = watchStatus.rawValue,
+            userRating = userRating,
+            episodeCount = details.episodeCount,
+            updatedAt = System.currentTimeMillis(),
+        )
+    }
+
     private fun WatchlistAnimeEntity.toDomain(): WatchlistAnime {
         return WatchlistAnime(
             slug = slug,
             title = title,
             posterUrl = posterUrl,
             synopsis = synopsis,
+            watchStatus = WatchStatus.fromRawValue(watchStatus),
+            userRating = userRating,
+            episodeCount = episodeCount,
             updatedAt = updatedAt,
         )
     }

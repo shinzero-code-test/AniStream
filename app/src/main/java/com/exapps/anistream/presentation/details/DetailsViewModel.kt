@@ -5,10 +5,14 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import androidx.navigation.toRoute
 import com.exapps.anistream.domain.model.AnimeDetails
+import com.exapps.anistream.domain.model.WatchStatus
+import com.exapps.anistream.domain.model.WatchlistAnime
 import com.exapps.anistream.domain.usecase.GetAnimeDetailsUseCase
-import com.exapps.anistream.domain.usecase.ObserveIsWatchlistedUseCase
 import com.exapps.anistream.domain.usecase.ObservePreferencesUseCase
+import com.exapps.anistream.domain.usecase.ObserveWatchEntryUseCase
+import com.exapps.anistream.domain.usecase.SetAnimeRatingUseCase
 import com.exapps.anistream.domain.usecase.SetPreferSummaryUseCase
+import com.exapps.anistream.domain.usecase.SetWatchStatusUseCase
 import com.exapps.anistream.domain.usecase.ToggleWatchlistUseCase
 import com.exapps.anistream.presentation.navigation.DetailsRoute
 import dagger.hilt.android.lifecycle.HiltViewModel
@@ -23,9 +27,11 @@ import javax.inject.Inject
 class DetailsViewModel @Inject constructor(
     savedStateHandle: SavedStateHandle,
     private val getAnimeDetailsUseCase: GetAnimeDetailsUseCase,
-    private val observeIsWatchlistedUseCase: ObserveIsWatchlistedUseCase,
+    private val observeWatchEntryUseCase: ObserveWatchEntryUseCase,
     private val observePreferencesUseCase: ObservePreferencesUseCase,
     private val toggleWatchlistUseCase: ToggleWatchlistUseCase,
+    private val setWatchStatusUseCase: SetWatchStatusUseCase,
+    private val setAnimeRatingUseCase: SetAnimeRatingUseCase,
     private val setPreferSummaryUseCase: SetPreferSummaryUseCase,
 ) : ViewModel() {
 
@@ -36,7 +42,7 @@ class DetailsViewModel @Inject constructor(
 
     init {
         loadDetails()
-        observeWatchlistState()
+        observeWatchEntry()
         observeSummaryPreference()
     }
 
@@ -47,6 +53,16 @@ class DetailsViewModel @Inject constructor(
 
     fun updatePreferSummary(enabled: Boolean) {
         viewModelScope.launch { setPreferSummaryUseCase(enabled) }
+    }
+
+    fun setWatchStatus(status: WatchStatus) {
+        val details = _uiState.value.details ?: return
+        viewModelScope.launch { setWatchStatusUseCase(details, status) }
+    }
+
+    fun setRating(rating: Int?) {
+        val details = _uiState.value.details ?: return
+        viewModelScope.launch { setAnimeRatingUseCase(details, rating) }
     }
 
     private fun loadDetails() {
@@ -65,17 +81,22 @@ class DetailsViewModel @Inject constructor(
                     _uiState.update {
                         it.copy(
                             isLoading = false,
-                            errorMessage = error.message ?: "Unable to load anime details.",
+                            errorMessage = error.message ?: "تعذر تحميل تفاصيل العمل.",
                         )
                     }
                 }
         }
     }
 
-    private fun observeWatchlistState() {
+    private fun observeWatchEntry() {
         viewModelScope.launch {
-            observeIsWatchlistedUseCase(route.slug).collect { isWatchlisted ->
-                _uiState.update { it.copy(isWatchlisted = isWatchlisted) }
+            observeWatchEntryUseCase(route.slug).collect { entry ->
+                _uiState.update { current ->
+                    current.copy(
+                        watchEntry = entry,
+                        isWatchlisted = entry != null,
+                    )
+                }
             }
         }
     }
@@ -92,6 +113,7 @@ class DetailsViewModel @Inject constructor(
 data class DetailsUiState(
     val isLoading: Boolean = true,
     val details: AnimeDetails? = null,
+    val watchEntry: WatchlistAnime? = null,
     val isWatchlisted: Boolean = false,
     val preferSummary: Boolean = false,
     val errorMessage: String? = null,

@@ -2,6 +2,7 @@ package com.exapps.anistream.data.scraper
 
 import com.exapps.anistream.core.common.DispatcherProvider
 import com.exapps.anistream.domain.model.AnimeDetails
+import com.exapps.anistream.domain.model.CatalogFilters
 import com.exapps.anistream.domain.model.EpisodeStream
 import com.exapps.anistream.domain.model.HomeFeed
 import com.exapps.anistream.domain.model.PaginatedTitles
@@ -28,18 +29,22 @@ class Anime3rbExtractor @Inject constructor(
         return parser.parseHome(fetchDocument(BASE_URL))
     }
 
-    override suspend fun getCatalog(page: Int): PaginatedTitles {
+    override suspend fun getCatalog(page: Int, filters: CatalogFilters): PaginatedTitles {
         val url = BASE_URL.toHttpUrl().newBuilder()
             .addPathSegments("titles/list")
+            .addQueryParameter("sort_by", filters.sort.wireValue)
+            .addQueryParameter("sort_dir", filters.direction.wireValue)
             .apply { if (page > 1) addQueryParameter("page", page.toString()) }
             .build()
         return parser.parseCatalog(fetchDocument(url.toString()), page)
     }
 
-    override suspend fun search(query: String, page: Int): PaginatedTitles {
+    override suspend fun search(query: String, page: Int, filters: CatalogFilters): PaginatedTitles {
         val url = BASE_URL.toHttpUrl().newBuilder()
             .addPathSegment("search")
             .addQueryParameter("q", query)
+            .addQueryParameter("sort_by", filters.sort.wireValue)
+            .addQueryParameter("sort_dir", filters.direction.wireValue)
             .apply { if (page > 1) addQueryParameter("page", page.toString()) }
             .build()
         return parser.parseSearch(fetchDocument(url.toString()), page)
@@ -77,7 +82,6 @@ class Anime3rbExtractor @Inject constructor(
 
         val preferredPlayback = mergedSources.firstOrNull { it.type == StreamType.HLS }?.url
             ?: mergedSources.firstOrNull { it.type == StreamType.MP4 }?.url
-            ?: mergedSources.firstOrNull { it.type == StreamType.DOWNLOAD }?.url
 
         return parsed.copy(
             playbackUrl = preferredPlayback ?: parsed.playbackUrl,

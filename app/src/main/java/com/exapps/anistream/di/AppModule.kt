@@ -94,7 +94,7 @@ object AppModule {
             context,
             AppDatabase::class.java,
             "anistream.db",
-        ).build()
+        ).fallbackToDestructiveMigration().build()
     }
 
     @Provides

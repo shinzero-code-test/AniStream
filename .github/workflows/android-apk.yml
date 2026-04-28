@@ -7,6 +7,9 @@ on:
   pull_request:
   workflow_dispatch:
 
+permissions:
+  contents: write
+
 jobs:
   build-debug-apk:
     runs-on: ubuntu-latest
@@ -27,14 +30,38 @@ jobs:
       - name: Set up Gradle
         uses: gradle/actions/setup-gradle@v4
 
+      - name: Read app version
+        id: version
+        run: |
+          VERSION_NAME=$(grep '^APP_VERSION_NAME=' gradle.properties | cut -d'=' -f2)
+          VERSION_CODE=$(grep '^APP_VERSION_CODE=' gradle.properties | cut -d'=' -f2)
+          echo "version_name=$VERSION_NAME" >> "$GITHUB_OUTPUT"
+          echo "version_code=$VERSION_CODE" >> "$GITHUB_OUTPUT"
+
       - name: Make Gradle executable
         run: chmod +x ./gradlew
 
-      - name: Assemble debug APK
+      - name: Assemble debug APKs for all architectures
         run: ./gradlew assembleDebug
 
-      - name: Upload debug APK
+      - name: Upload debug APK artifacts
         uses: actions/upload-artifact@v4
         with:
-          name: anistream-debug-apk
-          path: app/build/outputs/apk/debug/app-debug.apk
+          name: anistream-debug-apks-${{ steps.version.outputs.version_name }}
+          path: app/build/outputs/apk/debug/*.apk
+
+      - name: Extract changelog section
+        if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+        run: |
+          python .github/scripts/extract_changelog.py CHANGELOG.md "${{ steps.version.outputs.version_name }}" release-notes.md
+
+      - name: Create GitHub release and upload APKs
+        if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: v${{ steps.version.outputs.version_name }}
+          name: AniStream v${{ steps.version.outputs.version_name }}
+          body_path: release-notes.md
+          files: app/build/outputs/apk/debug/*.apk
+          fail_on_unmatched_files: true
+          make_latest: true

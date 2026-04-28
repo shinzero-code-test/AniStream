@@ -22,4 +22,7 @@ interface WatchlistDao {
 
     @Query("DELETE FROM watchlist WHERE slug = :slug")
     suspend fun deleteBySlug(slug: String)
+
+    @Query("DELETE FROM watchlist")
+    suspend fun clearAll()
 }

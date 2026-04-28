@@ -1,11 +1,13 @@
 package com.exapps.anistream.domain.usecase
 
 import com.exapps.anistream.domain.model.AnimeDetails
+import com.exapps.anistream.domain.model.CatalogFilters
 import com.exapps.anistream.domain.model.EpisodeStream
 import com.exapps.anistream.domain.model.HomeFeed
 import com.exapps.anistream.domain.model.PaginatedTitles
 import com.exapps.anistream.domain.model.PlaybackHistory
 import com.exapps.anistream.domain.model.UserPreferences
+import com.exapps.anistream.domain.model.WatchStatus
 import com.exapps.anistream.domain.model.WatchlistAnime
 import com.exapps.anistream.domain.repository.AnimeRepository
 import kotlinx.coroutines.flow.Flow
@@ -20,13 +22,20 @@ class GetHomeFeedUseCase @Inject constructor(
 class GetCatalogUseCase @Inject constructor(
     private val repository: AnimeRepository,
 ) {
-    suspend operator fun invoke(page: Int = 1): PaginatedTitles = repository.getCatalog(page)
+    suspend operator fun invoke(
+        page: Int = 1,
+        filters: CatalogFilters = CatalogFilters(),
+    ): PaginatedTitles = repository.getCatalog(page, filters)
 }
 
 class SearchAnimeUseCase @Inject constructor(
     private val repository: AnimeRepository,
 ) {
-    suspend operator fun invoke(query: String, page: Int = 1): PaginatedTitles = repository.search(query, page)
+    suspend operator fun invoke(
+        query: String,
+        page: Int = 1,
+        filters: CatalogFilters = CatalogFilters(),
+    ): PaginatedTitles = repository.search(query, page, filters)
 }
 
 class GetAnimeDetailsUseCase @Inject constructor(
@@ -49,6 +58,12 @@ class ObserveWatchlistUseCase @Inject constructor(
     operator fun invoke(): Flow<List<WatchlistAnime>> = repository.observeWatchlist()
 }
 
+class ObserveWatchEntryUseCase @Inject constructor(
+    private val repository: AnimeRepository,
+) {
+    operator fun invoke(slug: String): Flow<WatchlistAnime?> = repository.observeWatchEntry(slug)
+}
+
 class ObserveIsWatchlistedUseCase @Inject constructor(
     private val repository: AnimeRepository,
 ) {
@@ -59,6 +74,28 @@ class ToggleWatchlistUseCase @Inject constructor(
     private val repository: AnimeRepository,
 ) {
     suspend operator fun invoke(details: AnimeDetails) = repository.toggleWatchlist(details)
+}
+
+class SetWatchStatusUseCase @Inject constructor(
+    private val repository: AnimeRepository,
+) {
+    suspend operator fun invoke(details: AnimeDetails, status: WatchStatus) {
+        repository.setWatchStatus(details, status)
+    }
+}
+
+class SetAnimeRatingUseCase @Inject constructor(
+    private val repository: AnimeRepository,
+) {
+    suspend operator fun invoke(details: AnimeDetails, rating: Int?) {
+        repository.setAnimeRating(details, rating)
+    }
+}
+
+class ClearWatchlistUseCase @Inject constructor(
+    private val repository: AnimeRepository,
+) {
+    suspend operator fun invoke() = repository.clearWatchlist()
 }
 
 class ObservePlaybackHistoryUseCase @Inject constructor(
@@ -73,6 +110,12 @@ class SavePlaybackHistoryUseCase @Inject constructor(
     suspend operator fun invoke(stream: EpisodeStream, playbackPositionMs: Long) {
         repository.savePlaybackHistory(stream, playbackPositionMs)
     }
+}
+
+class ClearHistoryUseCase @Inject constructor(
+    private val repository: AnimeRepository,
+) {
+    suspend operator fun invoke() = repository.clearHistory()
 }
 
 class ObservePreferencesUseCase @Inject constructor(
@@ -97,4 +140,10 @@ class SetAutoPlayNextUseCase @Inject constructor(
     private val repository: AnimeRepository,
 ) {
     suspend operator fun invoke(enabled: Boolean) = repository.setAutoPlayNext(enabled)
+}
+
+class SetDynamicColorsUseCase @Inject constructor(
+    private val repository: AnimeRepository,
+) {
+    suspend operator fun invoke(enabled: Boolean) = repository.setDynamicColors(enabled)
 }

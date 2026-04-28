@@ -17,6 +17,24 @@ data class PaginatedTitles(
 )
 
 @Immutable
+data class CatalogFilters(
+    val sort: CatalogSort = CatalogSort.ADDITION_DATE,
+    val direction: SortDirection = SortDirection.DESC,
+)
+
+enum class CatalogSort(val wireValue: String) {
+    ADDITION_DATE("addition_date"),
+    NAME("name"),
+    RELEASE_DATE("release_date"),
+    RATE("rate"),
+}
+
+enum class SortDirection(val wireValue: String) {
+    ASC("asc"),
+    DESC("desc"),
+}
+
+@Immutable
 data class AnimeCard(
     val slug: String,
     val title: String,
@@ -58,6 +76,9 @@ data class AnimeDetails(
     val alternateTitles: List<String> = emptyList(),
     val genres: List<String> = emptyList(),
     val episodes: List<EpisodeItem> = emptyList(),
+    val trailers: List<TrailerItem> = emptyList(),
+    val externalLinks: List<ExternalLink> = emptyList(),
+    val relatedTitles: List<AnimeCard> = emptyList(),
 )
 
 @Immutable
@@ -84,6 +105,19 @@ data class DownloadLink(
     val url: String,
 )
 
+@Immutable
+data class ExternalLink(
+    val label: String,
+    val url: String,
+)
+
+@Immutable
+data class TrailerItem(
+    val title: String,
+    val embedUrl: String,
+)
+
+@Immutable
 data class EpisodeStream(
     val titleSlug: String,
     val animeTitle: String,
@@ -95,6 +129,9 @@ data class EpisodeStream(
     val playbackUrl: String? = null,
     val availableSources: List<VideoSource> = emptyList(),
     val downloadLinks: List<DownloadLink> = emptyList(),
+    val views: Long? = null,
+    val nextEpisodeNumber: Int? = null,
+    val batchDownloadUrl: String? = null,
 )
 
 @Immutable
@@ -103,6 +140,9 @@ data class WatchlistAnime(
     val title: String,
     val posterUrl: String,
     val synopsis: String? = null,
+    val watchStatus: WatchStatus = WatchStatus.PLAN_TO_WATCH,
+    val userRating: Int? = null,
+    val episodeCount: Int? = null,
     val updatedAt: Long,
 )
 
@@ -122,6 +162,7 @@ data class UserPreferences(
     val autoPlayNext: Boolean = true,
     val preferSummary: Boolean = false,
     val cinemaMode: Boolean = false,
+    val dynamicColors: Boolean = true,
 )
 
 enum class StreamType {
@@ -129,4 +170,19 @@ enum class StreamType {
     MP4,
     DOWNLOAD,
     PLAYER_PAGE,
+}
+
+enum class WatchStatus(val rawValue: String) {
+    WATCHING("watching"),
+    COMPLETED("completed"),
+    ON_HOLD("on_hold"),
+    DROPPED("dropped"),
+    PLAN_TO_WATCH("plan_to_watch"),
+    ;
+
+    companion object {
+        fun fromRawValue(value: String?): WatchStatus {
+            return entries.firstOrNull { it.rawValue == value } ?: PLAN_TO_WATCH
+        }
+    }
 }

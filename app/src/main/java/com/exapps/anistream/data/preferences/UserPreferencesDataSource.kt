@@ -26,6 +26,7 @@ class UserPreferencesDataSource @Inject constructor(
             autoPlayNext = prefs[Keys.AUTO_PLAY_NEXT] ?: true,
             preferSummary = prefs[Keys.PREFER_SUMMARY] ?: false,
             cinemaMode = prefs[Keys.CINEMA_MODE] ?: false,
+            dynamicColors = prefs[Keys.DYNAMIC_COLORS] ?: true,
         )
     }
 
@@ -41,9 +42,14 @@ class UserPreferencesDataSource @Inject constructor(
         store.edit { it[Keys.CINEMA_MODE] = enabled }
     }
 
+    suspend fun setDynamicColors(enabled: Boolean) {
+        store.edit { it[Keys.DYNAMIC_COLORS] = enabled }
+    }
+
     private object Keys {
         val AUTO_PLAY_NEXT = booleanPreferencesKey("auto_play_next")
         val PREFER_SUMMARY = booleanPreferencesKey("prefer_summary")
         val CINEMA_MODE = booleanPreferencesKey("cinema_mode")
+        val DYNAMIC_COLORS = booleanPreferencesKey("dynamic_colors")
     }
 }

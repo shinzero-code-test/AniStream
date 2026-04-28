@@ -16,6 +16,8 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.PlayArrow
+import androidx.compose.material3.AssistChip
+import androidx.compose.material3.AssistChipDefaults
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.Icon
@@ -26,14 +28,21 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import coil.compose.AsyncImage
+import com.exapps.anistream.R
 import com.exapps.anistream.domain.model.AnimeCard
 import com.exapps.anistream.domain.model.EpisodeCard
 import com.exapps.anistream.domain.model.EpisodeItem
+import com.exapps.anistream.domain.model.PlaybackHistory
+import com.exapps.anistream.domain.model.WatchStatus
+import com.exapps.anistream.domain.model.WatchlistAnime
+import kotlin.math.roundToInt
 
 @Composable
 fun TitlePosterCard(
@@ -73,6 +82,68 @@ fun TitlePosterCard(
             )
             Spacer(modifier = Modifier.height(6.dp))
             MetadataLine(primary = item.seasonLabel, secondary = item.episodeCount, tertiary = item.rating)
+        }
+    }
+}
+
+@Composable
+fun TitleSummaryCard(
+    item: AnimeCard,
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    Card(
+        modifier = modifier
+            .fillMaxWidth()
+            .clickable { onClick() },
+        shape = RoundedCornerShape(24.dp),
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
+        elevation = CardDefaults.cardElevation(defaultElevation = 3.dp),
+    ) {
+        Row(
+            modifier = Modifier.padding(14.dp),
+            horizontalArrangement = Arrangement.spacedBy(14.dp),
+        ) {
+            AsyncImage(
+                model = item.posterUrl,
+                contentDescription = item.title,
+                modifier = Modifier
+                    .width(104.dp)
+                    .aspectRatio(0.72f)
+                    .clip(RoundedCornerShape(18.dp)),
+                contentScale = ContentScale.Crop,
+            )
+
+            Column(modifier = Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                Text(
+                    text = item.title,
+                    style = MaterialTheme.typography.titleMedium,
+                    fontWeight = FontWeight.Bold,
+                    maxLines = 2,
+                    overflow = TextOverflow.Ellipsis,
+                )
+                MetadataLine(primary = item.seasonLabel, secondary = item.episodeCount, tertiary = item.rating)
+                if (!item.genres.isNullOrEmpty()) {
+                    Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                        item.genres.take(3).forEach { genre ->
+                            AssistChip(
+                                onClick = {},
+                                label = { Text(genre) },
+                                colors = AssistChipDefaults.assistChipColors(),
+                            )
+                        }
+                    }
+                }
+                if (!item.synopsis.isNullOrBlank()) {
+                    Text(
+                        text = item.synopsis.orEmpty(),
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        maxLines = 4,
+                        overflow = TextOverflow.Ellipsis,
+                    )
+                }
+            }
         }
     }
 }
@@ -119,6 +190,26 @@ fun EpisodePosterCard(
                         modifier = Modifier.padding(8.dp),
                     )
                 }
+                Box(
+                    modifier = Modifier
+                        .align(Alignment.BottomCenter)
+                        .fillMaxWidth()
+                        .background(
+                            Brush.verticalGradient(
+                                listOf(
+                                    MaterialTheme.colorScheme.surface.copy(alpha = 0f),
+                                    MaterialTheme.colorScheme.surface.copy(alpha = 0.84f),
+                                ),
+                            ),
+                        )
+                        .padding(8.dp),
+                ) {
+                    Text(
+                        text = item.episodeLabel,
+                        style = MaterialTheme.typography.labelMedium,
+                        color = MaterialTheme.colorScheme.primary,
+                    )
+                }
             }
 
             Spacer(modifier = Modifier.height(10.dp))
@@ -129,12 +220,16 @@ fun EpisodePosterCard(
                 maxLines = 2,
                 overflow = TextOverflow.Ellipsis,
             )
-            Spacer(modifier = Modifier.height(4.dp))
-            Text(
-                text = item.episodeLabel,
-                style = MaterialTheme.typography.bodyMedium,
-                color = MaterialTheme.colorScheme.primary,
-            )
+            if (!item.episodeTitle.isNullOrBlank()) {
+                Spacer(modifier = Modifier.height(4.dp))
+                Text(
+                    text = item.episodeTitle.orEmpty(),
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
+                )
+            }
         }
     }
 }
@@ -188,12 +283,12 @@ fun EpisodeRow(
 
             Column(modifier = Modifier.weight(1f)) {
                 Text(
-                    text = "Episode ${item.episodeNumber}",
+                    text = stringResource(id = R.string.episode_row_title, item.episodeNumber),
                     style = MaterialTheme.typography.labelLarge,
                     color = MaterialTheme.colorScheme.primary,
                 )
                 Text(
-                    text = item.title ?: "Watch now",
+                    text = item.title ?: stringResource(id = R.string.action_open),
                     style = MaterialTheme.typography.titleMedium,
                     maxLines = 2,
                     overflow = TextOverflow.Ellipsis,
@@ -201,11 +296,125 @@ fun EpisodeRow(
                 if (!item.duration.isNullOrBlank()) {
                     Spacer(modifier = Modifier.height(4.dp))
                     Text(
-                        text = item.duration,
+                        text = stringResource(id = R.string.episode_duration, item.duration.orEmpty()),
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                     )
                 }
+            }
+        }
+    }
+}
+
+@Composable
+fun WatchlistRowCard(
+    item: WatchlistAnime,
+    onClick: () -> Unit,
+) {
+    Card(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clickable { onClick() },
+        shape = RoundedCornerShape(22.dp),
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
+    ) {
+        Row(
+            modifier = Modifier.padding(14.dp),
+            horizontalArrangement = Arrangement.spacedBy(12.dp),
+        ) {
+            AsyncImage(
+                model = item.posterUrl,
+                contentDescription = item.title,
+                modifier = Modifier
+                    .width(96.dp)
+                    .aspectRatio(0.72f)
+                    .clip(RoundedCornerShape(16.dp)),
+                contentScale = ContentScale.Crop,
+            )
+
+            Column(modifier = Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                Text(
+                    text = item.title,
+                    style = MaterialTheme.typography.titleMedium,
+                    fontWeight = FontWeight.Bold,
+                    maxLines = 2,
+                    overflow = TextOverflow.Ellipsis,
+                )
+
+                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    AssistChip(onClick = {}, label = { Text(watchStatusLabel(item.watchStatus)) })
+                    if (item.userRating != null) {
+                        AssistChip(onClick = {}, label = { Text(stringResource(R.string.metadata_rating_short, item.userRating.toString())) })
+                    }
+                }
+
+                if (!item.synopsis.isNullOrBlank()) {
+                    Text(
+                        text = item.synopsis.orEmpty(),
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        maxLines = 3,
+                        overflow = TextOverflow.Ellipsis,
+                    )
+                }
+            }
+        }
+    }
+}
+
+@Composable
+fun HistoryRowCard(
+    item: PlaybackHistory,
+    onClick: () -> Unit,
+) {
+    Card(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clickable { onClick() },
+        shape = RoundedCornerShape(22.dp),
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
+    ) {
+        Row(
+            modifier = Modifier.padding(14.dp),
+            horizontalArrangement = Arrangement.spacedBy(12.dp),
+        ) {
+            AsyncImage(
+                model = item.posterUrl,
+                contentDescription = item.animeTitle,
+                modifier = Modifier
+                    .width(104.dp)
+                    .aspectRatio(16f / 9f)
+                    .clip(RoundedCornerShape(16.dp)),
+                contentScale = ContentScale.Crop,
+            )
+
+            Column(modifier = Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                Text(
+                    text = item.animeTitle,
+                    style = MaterialTheme.typography.titleMedium,
+                    fontWeight = FontWeight.Bold,
+                    maxLines = 2,
+                    overflow = TextOverflow.Ellipsis,
+                )
+                Text(
+                    text = stringResource(id = R.string.episode_row_title, item.episodeNumber),
+                    style = MaterialTheme.typography.labelLarge,
+                    color = MaterialTheme.colorScheme.primary,
+                )
+                if (!item.episodeTitle.isNullOrBlank()) {
+                    Text(
+                        text = item.episodeTitle.orEmpty(),
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis,
+                    )
+                }
+                Text(
+                    text = stringResource(id = R.string.history_position, formatMillis(item.playbackPositionMs)),
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
             }
         }
     }
@@ -217,7 +426,11 @@ private fun MetadataLine(
     secondary: String?,
     tertiary: String?,
 ) {
-    val parts = listOfNotNull(primary, secondary?.let { "$it eps" }, tertiary?.let { "★ $it" })
+    val secondaryText = secondary?.takeIf { it.isNotBlank() }
+        ?.let { stringResource(id = R.string.metadata_episode_count_short, it) }
+    val tertiaryText = tertiary?.takeIf { it.isNotBlank() }
+        ?.let { stringResource(id = R.string.metadata_rating_short, it) }
+    val parts = listOfNotNull(primary?.takeIf { it.isNotBlank() }, secondaryText, tertiaryText)
     if (parts.isEmpty()) return
 
     Text(
@@ -227,4 +440,27 @@ private fun MetadataLine(
         maxLines = 1,
         overflow = TextOverflow.Ellipsis,
     )
+}
+
+@Composable
+fun watchStatusLabel(status: WatchStatus): String {
+    return when (status) {
+        WatchStatus.WATCHING -> stringResource(id = R.string.watch_status_watching)
+        WatchStatus.COMPLETED -> stringResource(id = R.string.watch_status_completed)
+        WatchStatus.ON_HOLD -> stringResource(id = R.string.watch_status_on_hold)
+        WatchStatus.DROPPED -> stringResource(id = R.string.watch_status_dropped)
+        WatchStatus.PLAN_TO_WATCH -> stringResource(id = R.string.watch_status_plan_to_watch)
+    }
+}
+
+private fun formatMillis(value: Long): String {
+    val totalSeconds = (value / 1000f).roundToInt().coerceAtLeast(0)
+    val hours = totalSeconds / 3600
+    val minutes = (totalSeconds % 3600) / 60
+    val seconds = totalSeconds % 60
+    return if (hours > 0) {
+        "%d:%02d:%02d".format(hours, minutes, seconds)
+    } else {
+        "%02d:%02d".format(minutes, seconds)
+    }
 }

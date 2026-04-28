@@ -6,9 +6,11 @@ import com.exapps.anistream.domain.model.DownloadLink
 import com.exapps.anistream.domain.model.EpisodeCard
 import com.exapps.anistream.domain.model.EpisodeItem
 import com.exapps.anistream.domain.model.EpisodeStream
+import com.exapps.anistream.domain.model.ExternalLink
 import com.exapps.anistream.domain.model.HomeFeed
 import com.exapps.anistream.domain.model.PaginatedTitles
 import com.exapps.anistream.domain.model.StreamType
+import com.exapps.anistream.domain.model.TrailerItem
 import com.exapps.anistream.domain.model.VideoSource
 import org.jsoup.nodes.Document
 import org.jsoup.nodes.Element
@@ -63,9 +65,8 @@ class Anime3rbHtmlParser @Inject constructor() {
     }
 
     fun parseSearch(document: Document, page: Int): PaginatedTitles {
-        val items = document.select("div.titles-list div.title-card").map(::parseTitleCard)
         return PaginatedTitles(
-            items = items.distinctBy { it.slug },
+            items = document.select("div.titles-list div.title-card").map(::parseTitleCard).distinctBy { it.slug },
             currentPage = page,
             hasNextPage = document.selectFirst("nav[aria-label=Pagination Navigation] button[rel=next]") != null,
         )
@@ -83,10 +84,7 @@ class Anime3rbHtmlParser @Inject constructor() {
             ?.trim()
 
         val posterUrl = document.selectFirst("section img[alt^=بوستر]")?.bestImageUrl().orEmpty()
-        val contentRoot = titleHeader?.parents()?.firstOrNull { parent ->
-            parent.selectFirst("div[x-data*=summary]") != null
-        } ?: document
-
+        val contentRoot = titleHeader?.parent()?.parent() ?: document
         val detailsTable = document.select("table.leading-loose").firstOrNull()
         val metrics = document.select("div.rounded-lg.border")
 
@@ -107,16 +105,37 @@ class Anime3rbHtmlParser @Inject constructor() {
             ?.filter { it.isNotBlank() }
             ?.joinToString("\n\n")
 
-        val alternateTitles = run {
-            val labels = contentRoot.select("label")
-            val targetLabel = labels.firstOrNull { it.text().contains("أسماء أخرى") }
-            targetLabel?.nextElementSibling()?.select("h2")?.eachText().orEmpty()
-        }
+        val alternateTitles = contentRoot
+            .findLabeledBlock("أسماء أخرى")
+            ?.select("h2")
+            ?.eachText()
+            .orEmpty()
+
+        val externalLinks = contentRoot
+            .findLabeledBlock("المصادر")
+            ?.select("a.btn.btn-md.btn-light")
+            ?.mapNotNull { link ->
+                val url = link.absUrl("href")
+                if (url.isBlank()) return@mapNotNull null
+                ExternalLink(label = link.text().trim(), url = url)
+            }
+            .orEmpty()
+
+        val trailers = parseTrailers(document)
 
         val episodes = document
             .select("div.video-list a[href*=/episode/]")
             .map(::parseEpisodeItem)
             .distinctBy { it.episodeUrl }
+
+        val relatedSection = document.select("div.glide").firstOrNull { glide ->
+            glide.select("h3.text-lg").any { it.text().contains("أنميات مشابهة مقترحة") }
+        }
+        val relatedTitles = relatedSection
+            ?.select("ul.glide__slides > li div.title-card")
+            ?.map(::parseTitleCard)
+            ?.distinctBy { it.slug }
+            .orEmpty()
 
         return AnimeDetails(
             slug = slug,
@@ -135,6 +154,9 @@ class Anime3rbHtmlParser @Inject constructor() {
             alternateTitles = alternateTitles,
             genres = contentRoot.select("a[href*=/genre/]").map { it.text().trim() }.distinct(),
             episodes = episodes,
+            trailers = trailers,
+            externalLinks = externalLinks,
+            relatedTitles = relatedTitles,
         )
     }
 
@@ -158,6 +180,15 @@ class Anime3rbHtmlParser @Inject constructor() {
         val activeSourceId = decodedSnapshot.livewireValue("video_source")
         val iframeUrl = document.selectFirst("iframe")?.absUrl("src")
         val episodeTitle = document.selectFirst("h2.inline.text-lg.font-light")?.text()?.trim()
+        val views = decodedSnapshot.livewireValue("views")?.toLongOrNull()
+        val batchDownloadUrl = document.selectFirst("a[href*=/titles/$titleSlug/download]")?.absUrl("href")
+
+        val nextEpisodeNumber = document
+            .selectFirst("div.video-list a.active")
+            ?.nextElementSibling()
+            ?.absUrl("href")
+            ?.substringAfterLast("/")
+            ?.toIntOrNull()
 
         val availableSources = document.select("button[data-video-source]").mapIndexed { index, button ->
             val label = button.selectFirst("span[title]")?.text()?.trim()
@@ -203,7 +234,29 @@ class Anime3rbHtmlParser @Inject constructor() {
                 else -> emptyList()
             },
             downloadLinks = downloadLinks,
+            views = views,
+            nextEpisodeNumber = nextEpisodeNumber,
+            batchDownloadUrl = batchDownloadUrl,
         )
+    }
+
+    private fun parseTrailers(document: Document): List<TrailerItem> {
+        val iframeTrailers = document.select("div#trailers iframe[data-src]").mapIndexed { index, iframe ->
+            TrailerItem(
+                title = "Trailer ${index + 1}",
+                embedUrl = iframe.absUrl("data-src").ifBlank { iframe.attr("data-src") },
+            )
+        }.filter { it.embedUrl.isNotBlank() }
+
+        if (iframeTrailers.isNotEmpty()) return iframeTrailers
+
+        return Regex("https://www\\.youtube\\.com/embed/[^\"\\s]+")
+            .findAll(document.outerHtml())
+            .mapIndexed { index, matchResult ->
+                TrailerItem(title = "Trailer ${index + 1}", embedUrl = matchResult.value)
+            }
+            .toList()
+            .distinctBy { it.embedUrl }
     }
 
     private fun parseTitleCard(card: Element): AnimeCard {
@@ -234,7 +287,9 @@ class Anime3rbHtmlParser @Inject constructor() {
         val url = anchor.absUrl("href")
         val segments = url.substringAfter("https://anime3rb.com").trim('/').split("/")
         val titleSlug = segments.getOrNull(1).orEmpty()
-        val episodeNumber = segments.getOrNull(2)?.toIntOrNull() ?: anchor.selectFirst("p.number")?.text()?.extractNumber()?.toIntOrNull() ?: 0
+        val episodeNumber = segments.getOrNull(2)?.toIntOrNull()
+            ?: anchor.selectFirst("p.number")?.text()?.extractNumber()?.toIntOrNull()
+            ?: 0
         return EpisodeCard(
             titleSlug = titleSlug,
             episodeNumber = episodeNumber,
@@ -257,6 +312,11 @@ class Anime3rbHtmlParser @Inject constructor() {
             posterUrl = anchor.selectFirst("img")?.bestImageUrl().orEmpty(),
             episodeUrl = url,
         )
+    }
+
+    private fun Element.findLabeledBlock(label: String): Element? {
+        val target = select("label").firstOrNull { it.text().contains(label) } ?: return null
+        return target.nextElementSibling()
     }
 
     private fun String.extractNumber(): String? = Regex("\\d+(?:\\.\\d+)?").find(this)?.value
@@ -286,10 +346,11 @@ class Anime3rbHtmlParser @Inject constructor() {
     }
 
     private fun String.livewireValue(field: String): String? {
-        return Regex("\"$field\":\"(.*?)\"")
+        return Regex("\"$field\":(?:\"(.*?)\"|([0-9]+))")
             .find(this)
-            ?.groupValues
-            ?.getOrNull(1)
+            ?.let { match ->
+                match.groupValues.getOrNull(1).orEmpty().ifBlank { match.groupValues.getOrNull(2).orEmpty() }
+            }
             ?.replace("\\/", "/")
             ?.replace("&amp;", "&")
     }

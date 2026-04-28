@@ -1,3 +1,114 @@
 <resources>
     <string name="app_name">AniStream</string>
+
+    <string name="nav_home">الرئيسية</string>
+    <string name="nav_library">المكتبة</string>
+    <string name="nav_settings">الإعدادات</string>
+
+    <string name="content_back">رجوع</string>
+    <string name="action_retry">إعادة المحاولة</string>
+    <string name="action_load_more">تحميل المزيد</string>
+    <string name="action_open">فتح</string>
+    <string name="action_clear">مسح</string>
+    <string name="action_done">تم</string>
+
+    <string name="home_search_label">ابحث في Anime3rb</string>
+    <string name="home_search_supporting">يتم جلب البيانات مباشرة من Anime3rb.com باستخدام محددات تم التحقق منها محلياً.</string>
+    <string name="home_loading">جارٍ تحميل الصفحة الرئيسية والفهرس…</string>
+    <string name="home_error">تعذر تحميل البيانات حالياً.</string>
+    <string name="search_results_title">نتائج البحث</string>
+    <string name="search_loading_title">جارٍ البحث…</string>
+    <string name="search_empty">لا توجد نتائج مطابقة حالياً.</string>
+    <string name="section_continue_watching_title">أكمل المشاهدة</string>
+    <string name="section_continue_watching_subtitle">استكمال آخر الحلقات التي بدأت مشاهدتها.</string>
+    <string name="section_featured_title">الأنميات المثبتة</string>
+    <string name="section_featured_subtitle">مأخوذة من شريط Anime3rb الرئيسي.</string>
+    <string name="section_latest_episodes_title">أحدث الحلقات</string>
+    <string name="section_latest_episodes_subtitle">مأخوذة من قسم #videos في الصفحة الرئيسية.</string>
+    <string name="section_latest_titles_title">آخر الأنميات المضافة</string>
+    <string name="section_latest_titles_subtitle">قائمة الأعمال الجديدة مباشرة من Anime3rb.</string>
+    <string name="section_catalog_title">فهرس الأنمي</string>
+    <string name="section_catalog_subtitle">يدعم الترتيب والتحميل التدريجي من الموقع.</string>
+    <string name="catalog_sort_label">ترتيب الفهرس</string>
+    <string name="catalog_sort_addition_date">تاريخ الإضافة</string>
+    <string name="catalog_sort_name">الاسم</string>
+    <string name="catalog_sort_release_date">تاريخ الإصدار</string>
+    <string name="catalog_sort_rate">التقييم</string>
+    <string name="catalog_sort_direction_asc">تصاعدي</string>
+    <string name="catalog_sort_direction_desc">تنازلي</string>
+    <string name="search_load_more">تحميل المزيد من النتائج</string>
+
+    <string name="library_title">المكتبة</string>
+    <string name="library_watchlist_tab">قائمتي</string>
+    <string name="library_history_tab">السجل</string>
+    <string name="library_watchlist_empty">لم تضف أي عمل إلى قائمتك بعد.</string>
+    <string name="library_history_empty">لا توجد حلقات في السجل بعد.</string>
+    <string name="library_watch_status_filter">تصفية الحالة</string>
+    <string name="history_position">آخر موضع: %1$s</string>
+
+    <string name="settings_title">الإعدادات</string>
+    <string name="settings_subtitle">تخصيص تجربة المشاهدة والتخزين المحلي.</string>
+    <string name="settings_auto_play_next">التشغيل التلقائي للحلقة التالية</string>
+    <string name="settings_auto_play_next_desc">ينتقل المشغل إلى الحلقة التالية تلقائياً عند انتهاء الحلقة الحالية.</string>
+    <string name="settings_prefer_summary">عرض ملخص القصة افتراضياً</string>
+    <string name="settings_prefer_summary_desc">يستخدم الملخص المختصر بدلاً من القصة الكاملة في صفحة العمل.</string>
+    <string name="settings_cinema_mode">الوضع السينمائي</string>
+    <string name="settings_cinema_mode_desc">يحافظ على تفضيل العرض السينمائي داخل المشغل.</string>
+    <string name="settings_dynamic_colors">الألوان الديناميكية</string>
+    <string name="settings_dynamic_colors_desc">استخدام ألوان Material You عندما تكون متاحة على الجهاز.</string>
+    <string name="settings_clear_history">مسح السجل</string>
+    <string name="settings_clear_watchlist">مسح القائمة</string>
+    <string name="settings_local_scraping_note">هذا التطبيق يعتمد على الكشط المحلي فقط ولا يستخدم أي خادم وسيط أو حسابات خارجية.</string>
+    <string name="settings_version">الإصدار %1$s (%2$d)</string>
+
+    <string name="details_title_fallback">تفاصيل الأنمي</string>
+    <string name="details_empty">لا توجد بيانات لعرضها.</string>
+    <string name="details_watchlist_add">إضافة إلى القائمة</string>
+    <string name="details_watchlist_remove">إزالة من القائمة</string>
+    <string name="details_summary_mode">وضع الملخص</string>
+    <string name="details_full_story_mode">وضع القصة الكاملة</string>
+    <string name="details_preference_persisted">يتم حفظ هذا التفضيل محلياً عبر DataStore.</string>
+    <string name="details_alternate_titles">أسماء أخرى</string>
+    <string name="details_episodes_title">الحلقات</string>
+    <string name="details_episodes_subtitle">تم استخراجها من بنية .video-list و .video-data في Anime3rb.</string>
+    <string name="details_related_titles">أنميات مشابهة مقترحة</string>
+    <string name="details_trailers">العروض التشويقية</string>
+    <string name="details_external_sources">المصادر الخارجية</string>
+    <string name="details_local_rating">تقييمك الشخصي</string>
+    <string name="details_local_status">حالة المشاهدة</string>
+
+    <string name="label_status">الحالة</string>
+    <string name="label_season">الإصدار</string>
+    <string name="label_studio">الاستديو</string>
+    <string name="label_author">المؤلف</string>
+    <string name="label_score">التقييم</string>
+    <string name="label_episodes">الحلقات</string>
+    <string name="label_age">التصنيف العمري</string>
+    <string name="label_views">مشاهدة</string>
+
+    <string name="episode_row_title">الحلقة %1$d</string>
+    <string name="episode_duration">المدة: %1$s</string>
+    <string name="metadata_episode_count_short">%1$s حلقة</string>
+    <string name="metadata_rating_short">★ %1$s</string>
+    <string name="metadata_status_short">%1$s</string>
+
+    <string name="player_title_fallback">المشغل</string>
+    <string name="player_empty">لا يوجد مصدر تشغيل متاح حالياً.</string>
+    <string name="player_sources_title">مصادر المشاهدة</string>
+    <string name="player_downloads_title">روابط التحميل</string>
+    <string name="player_open_download_pack">تحميل جميع الحلقات</string>
+    <string name="player_next_episode">تشغيل الحلقة التالية</string>
+    <string name="player_episode_header">%1$s - الحلقة %2$d</string>
+    <string name="player_source_hls">بث HLS</string>
+    <string name="player_source_mp4">ملف MP4</string>
+    <string name="player_source_download">تحميل</string>
+    <string name="player_source_embedded">مشغل مضمّن</string>
+
+    <string name="watch_status_watching">أشاهده حالياً</string>
+    <string name="watch_status_completed">أنهيت مشاهدته</string>
+    <string name="watch_status_on_hold">سأكمله لاحقاً</string>
+    <string name="watch_status_dropped">لن أكمله</string>
+    <string name="watch_status_plan_to_watch">سأشاهده لاحقاً</string>
+
+    <string name="rating_clear">إلغاء التقييم</string>
 </resources>
