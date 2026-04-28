@@ -223,22 +223,22 @@ fun DashboardScreen(
                 }
 
                 homeSection(
-                    title = stringResource(id = R.string.section_featured_title),
-                    subtitle = stringResource(id = R.string.section_featured_subtitle),
+                    titleRes = R.string.section_featured_title,
+                    subtitleRes = R.string.section_featured_subtitle,
                     items = state.featuredEpisodes,
                     onClick = onOpenEpisode,
                 )
 
                 homeSection(
-                    title = stringResource(id = R.string.section_latest_episodes_title),
-                    subtitle = stringResource(id = R.string.section_latest_episodes_subtitle),
+                    titleRes = R.string.section_latest_episodes_title,
+                    subtitleRes = R.string.section_latest_episodes_subtitle,
                     items = state.latestEpisodes,
                     onClick = onOpenEpisode,
                 )
 
                 titleSection(
-                    title = stringResource(id = R.string.section_latest_titles_title),
-                    subtitle = stringResource(id = R.string.section_latest_titles_subtitle),
+                    titleRes = R.string.section_latest_titles_title,
+                    subtitleRes = R.string.section_latest_titles_subtitle,
                     items = state.latestTitles,
                     onClick = onOpenDetails,
                 )
@@ -272,12 +272,17 @@ fun DashboardScreen(
 }
 
 private fun androidx.compose.foundation.lazy.LazyListScope.homeSection(
-    title: String,
-    subtitle: String,
+    titleRes: Int,
+    subtitleRes: Int,
     items: List<EpisodeCard>,
     onClick: (String, Int) -> Unit,
 ) {
-    item { SectionTitle(title = title, subtitle = subtitle) }
+    item {
+        SectionTitle(
+            title = stringResource(id = titleRes),
+            subtitle = stringResource(id = subtitleRes),
+        )
+    }
     item {
         LazyRow(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
             items(items, key = { it.episodeUrl }) { item ->
@@ -288,12 +293,17 @@ private fun androidx.compose.foundation.lazy.LazyListScope.homeSection(
 }
 
 private fun androidx.compose.foundation.lazy.LazyListScope.titleSection(
-    title: String,
-    subtitle: String,
+    titleRes: Int,
+    subtitleRes: Int,
     items: List<AnimeCard>,
     onClick: (String) -> Unit,
 ) {
-    item { SectionTitle(title = title, subtitle = subtitle) }
+    item {
+        SectionTitle(
+            title = stringResource(id = titleRes),
+            subtitle = stringResource(id = subtitleRes),
+        )
+    }
     item {
         LazyRow(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
             items(items, key = { it.slug }) { item ->

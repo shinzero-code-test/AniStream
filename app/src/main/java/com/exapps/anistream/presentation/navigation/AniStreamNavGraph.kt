@@ -14,7 +14,6 @@ import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.calculateBottomPadding
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.navigation.NavDestination.Companion.hasRoute
 import androidx.navigation.compose.NavHost
@@ -108,7 +107,7 @@ fun AniStreamNavGraph() {
         NavHost(
             navController = navController,
             startDestination = DashboardRoute,
-            modifier = Modifier.padding(bottom = innerPadding.calculateBottomPadding()),
+            modifier = Modifier.padding(innerPadding),
         ) {
             composable<DashboardRoute> {
                 val viewModel = hiltViewModel<DashboardViewModel>()

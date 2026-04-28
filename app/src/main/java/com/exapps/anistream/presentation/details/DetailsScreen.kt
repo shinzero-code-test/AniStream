@@ -195,6 +195,7 @@ fun DetailsScreen(
 }
 
 @Composable
+@OptIn(ExperimentalLayoutApi::class)
 private fun HeaderCard(details: AnimeDetails) {
     Card(
         shape = RoundedCornerShape(28.dp),
