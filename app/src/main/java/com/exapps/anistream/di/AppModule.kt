@@ -7,6 +7,7 @@ import com.exapps.anistream.core.common.DispatcherProvider
 import com.exapps.anistream.core.network.BrowserHeadersInterceptor
 import com.exapps.anistream.core.network.CloudflareChallengeInterceptor
 import com.exapps.anistream.core.network.InMemoryCookieJar
+import com.exapps.anistream.core.network.MutableCookieStore
 import com.exapps.anistream.data.local.AppDatabase
 import com.exapps.anistream.data.local.HistoryDao
 import com.exapps.anistream.data.local.WatchlistDao
@@ -54,6 +55,10 @@ object AppModule {
     @Provides
     @Singleton
     fun provideCookieJar(): InMemoryCookieJar = InMemoryCookieJar()
+
+    @Provides
+    @Singleton
+    fun provideMutableCookieStore(cookieJar: InMemoryCookieJar): MutableCookieStore = cookieJar
 
     @Provides
     @Singleton
