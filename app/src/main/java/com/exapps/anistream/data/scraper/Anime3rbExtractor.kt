@@ -1,6 +1,7 @@
 package com.exapps.anistream.data.scraper
 
 import com.exapps.anistream.core.common.DispatcherProvider
+import com.exapps.anistream.core.webview.CloudflareChallengeSolver
 import com.exapps.anistream.domain.model.AnimeDetails
 import com.exapps.anistream.domain.model.CatalogFilters
 import com.exapps.anistream.domain.model.EpisodeStream
@@ -22,6 +23,7 @@ class Anime3rbExtractor @Inject constructor(
     private val client: OkHttpClient,
     private val parser: Anime3rbHtmlParser,
     private val videoStreamResolver: VideoStreamResolver,
+    private val cloudflareChallengeSolver: CloudflareChallengeSolver,
     private val dispatchers: DispatcherProvider,
 ) : AnimeExtractor {
 
@@ -91,6 +93,8 @@ class Anime3rbExtractor @Inject constructor(
 
     private suspend fun fetchDocument(url: String): Document {
         return withContext(dispatchers.io) {
+            val httpUrl = url.toHttpUrl()
+            cloudflareChallengeSolver.ensureClearance(httpUrl)
             val request = Request.Builder().url(url).get().build()
             client.newCall(request).execute().use { response ->
                 check(response.isSuccessful) { "Request failed: ${response.code} ${response.message}" }

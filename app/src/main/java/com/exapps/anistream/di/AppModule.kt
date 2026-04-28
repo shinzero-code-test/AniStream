@@ -7,7 +7,9 @@ import com.exapps.anistream.core.common.DispatcherProvider
 import com.exapps.anistream.core.network.BrowserHeadersInterceptor
 import com.exapps.anistream.core.network.CloudflareChallengeInterceptor
 import com.exapps.anistream.core.network.InMemoryCookieJar
+import com.exapps.anistream.core.network.InMemoryWebSessionStore
 import com.exapps.anistream.core.network.MutableCookieStore
+import com.exapps.anistream.core.network.WebSessionStore
 import com.exapps.anistream.data.local.AppDatabase
 import com.exapps.anistream.data.local.HistoryDao
 import com.exapps.anistream.data.local.WatchlistDao
@@ -16,7 +18,7 @@ import com.exapps.anistream.data.scraper.Anime3rbExtractor
 import com.exapps.anistream.data.scraper.AnimeExtractor
 import com.exapps.anistream.domain.repository.AnimeRepository
 import com.exapps.anistream.core.webview.CloudflareChallengeSolver
-import com.exapps.anistream.core.webview.WebViewCloudflareChallengeSolver
+import com.exapps.anistream.core.webview.CloudflareWebViewInterceptor
 import dagger.Binds
 import dagger.Module
 import dagger.Provides
@@ -37,7 +39,11 @@ abstract class AppBindingsModule {
 
     @Binds
     @Singleton
-    abstract fun bindCloudflareSolver(impl: WebViewCloudflareChallengeSolver): CloudflareChallengeSolver
+    abstract fun bindCloudflareSolver(impl: CloudflareWebViewInterceptor): CloudflareChallengeSolver
+
+    @Binds
+    @Singleton
+    abstract fun bindWebSessionStore(impl: InMemoryWebSessionStore): WebSessionStore
 
     @Binds
     @Singleton

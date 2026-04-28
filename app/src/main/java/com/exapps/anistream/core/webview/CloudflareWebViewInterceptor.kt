@@ -1,51 +1,61 @@
 package com.exapps.anistream.core.webview
 
 import android.content.Context
+import android.graphics.Bitmap
 import android.os.Looper
 import android.webkit.CookieManager
 import android.webkit.WebChromeClient
+import android.webkit.WebResourceError
+import android.webkit.WebResourceRequest
 import android.webkit.WebSettings
 import android.webkit.WebView
 import android.webkit.WebViewClient
 import com.exapps.anistream.core.common.DispatcherProvider
 import com.exapps.anistream.core.network.BrowserHeaders
 import com.exapps.anistream.core.network.MutableCookieStore
+import com.exapps.anistream.core.network.WebSessionStore
 import dagger.hilt.android.qualifiers.ApplicationContext
+import kotlinx.coroutines.suspendCancellableCoroutine
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.withContext
 import kotlinx.coroutines.withTimeout
-import kotlinx.coroutines.suspendCancellableCoroutine
 import okhttp3.HttpUrl
+import okhttp3.HttpUrl.Companion.toHttpUrlOrNull
 import kotlin.coroutines.resume
 import kotlin.coroutines.resumeWithException
 import javax.inject.Inject
 import javax.inject.Singleton
 
 @Singleton
-class WebViewCloudflareChallengeSolver @Inject constructor(
+class CloudflareWebViewInterceptor @Inject constructor(
     @ApplicationContext private val appContext: Context,
     private val cookieStore: MutableCookieStore,
+    private val sessionStore: WebSessionStore,
     private val dispatchers: DispatcherProvider,
 ) : CloudflareChallengeSolver {
 
     private val mutex = Mutex()
 
     override suspend fun ensureClearance(url: HttpUrl) {
+        if (sessionStore.hasFreshSession(url)) return
+
         mutex.withLock {
+            if (sessionStore.hasFreshSession(url)) return
+
             withTimeout(45_000) {
                 withContext(dispatchers.main) {
-                    if (Looper.myLooper() == null) {
-                        throw IllegalStateException("WebView requires a prepared main looper")
+                    check(Looper.myLooper() == Looper.getMainLooper()) {
+                        "WebView bootstrap must run on the main thread"
                     }
 
-                    suspendCancellableCoroutine { continuation ->
+                    suspendCancellableCoroutine<Unit> { continuation ->
                         val cookieManager = CookieManager.getInstance().apply {
                             setAcceptCookie(true)
                         }
-
                         val webView = WebView(appContext)
                         runCatching { cookieManager.setAcceptThirdPartyCookies(webView, true) }
+
                         fun cleanup() {
                             webView.stopLoading()
                             webView.loadUrl("about:blank")
@@ -62,32 +72,50 @@ class WebViewCloudflareChallengeSolver @Inject constructor(
                             cacheMode = WebSettings.LOAD_DEFAULT
                             loadsImagesAutomatically = false
                             mediaPlaybackRequiresUserGesture = false
-                            userAgentString = BrowserHeaders.USER_AGENT
+                            userAgentString = sessionStore.currentUserAgent()
                         }
                         webView.isVerticalScrollBarEnabled = false
                         webView.isHorizontalScrollBarEnabled = false
                         webView.webChromeClient = WebChromeClient()
                         webView.webViewClient = object : WebViewClient() {
-                            override fun onPageFinished(view: WebView, finishedUrl: String) {
+                            override fun onPageStarted(view: WebView, pageUrl: String, favicon: Bitmap?) {
+                                val currentUserAgent = view.settings.userAgentString.orEmpty()
+                                if (currentUserAgent.isNotBlank()) {
+                                    sessionStore.updateUserAgent(currentUserAgent)
+                                }
+                            }
+
+                            override fun onPageFinished(view: WebView, pageUrl: String) {
                                 view.postDelayed({
-                                    val cookieHeader = cookieManager.getCookie(url.toString()).orEmpty()
-                                    val title = view.title.orEmpty()
+                                    if (continuation.isCompleted) return@postDelayed
+
+                                    val resolvedUrl = pageUrl.toHttpUrlOrNull() ?: url
+                                    val cookieHeader = cookieManager.getCookie(pageUrl)
+                                        ?: cookieManager.getCookie(url.toString())
+                                        .orEmpty()
+                                    val currentUserAgent = view.settings.userAgentString.orEmpty()
+                                    if (currentUserAgent.isNotBlank()) {
+                                        sessionStore.updateUserAgent(currentUserAgent)
+                                    }
+
                                     val solved = cookieHeader.contains("cf_clearance") ||
-                                        (!title.contains("Just a moment", ignoreCase = true) &&
-                                            !title.contains("Attention Required", ignoreCase = true))
-                                    if (!solved || continuation.isCompleted) return@postDelayed
+                                        (!view.title.orEmpty().contains("Just a moment", ignoreCase = true) &&
+                                            !view.title.orEmpty().contains("Attention Required", ignoreCase = true))
+
+                                    if (!solved) return@postDelayed
 
                                     cookieManager.flush()
-                                    cookieStore.saveFromHeader(url, cookieHeader)
+                                    cookieStore.saveFromHeader(resolvedUrl, cookieHeader)
+                                    sessionStore.markSessionAcquired(resolvedUrl)
                                     continuation.resume(Unit)
                                     cleanup()
-                                }, 750)
+                                }, 900)
                             }
 
                             override fun onReceivedError(
                                 view: WebView,
-                                request: android.webkit.WebResourceRequest,
-                                error: android.webkit.WebResourceError,
+                                request: WebResourceRequest,
+                                error: WebResourceError,
                             ) {
                                 if (!request.isForMainFrame || continuation.isCompleted) return
                                 continuation.resumeWithException(IllegalStateException(error.description.toString()))
@@ -95,7 +123,10 @@ class WebViewCloudflareChallengeSolver @Inject constructor(
                             }
                         }
 
-                        webView.loadUrl(url.toString(), BrowserHeaders.defaultHeaders)
+                        webView.loadUrl(
+                            url.toString(),
+                            BrowserHeaders.buildDefaultHeaders(sessionStore.currentUserAgent()),
+                        )
                     }
                 }
             }

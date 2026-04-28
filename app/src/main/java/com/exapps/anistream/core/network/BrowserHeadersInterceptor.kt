@@ -6,10 +6,12 @@ import javax.inject.Inject
 import javax.inject.Singleton
 
 @Singleton
-class BrowserHeadersInterceptor @Inject constructor() : Interceptor {
+class BrowserHeadersInterceptor @Inject constructor(
+    private val sessionStore: WebSessionStore,
+) : Interceptor {
     override fun intercept(chain: Interceptor.Chain): Response {
         val builder = chain.request().newBuilder()
-        BrowserHeaders.defaultHeaders.forEach { (name, value) ->
+        BrowserHeaders.buildDefaultHeaders(sessionStore.currentUserAgent()).forEach { (name, value) ->
             if (chain.request().header(name).isNullOrBlank()) {
                 builder.header(name, value)
             }

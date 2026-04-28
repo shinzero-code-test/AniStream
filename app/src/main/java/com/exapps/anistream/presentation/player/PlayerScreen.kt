@@ -117,7 +117,7 @@ fun PlayerScreen(
                         .setMediaSourceFactory(
                             androidx.media3.exoplayer.source.DefaultMediaSourceFactory(
                                 DefaultHttpDataSource.Factory()
-                                    .setUserAgent(BrowserHeaders.USER_AGENT)
+                                    .setUserAgent(BrowserHeaders.FALLBACK_USER_AGENT)
                                     .setDefaultRequestProperties(
                                         mapOf(
                                             "Referer" to stream.refererUrl,

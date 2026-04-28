@@ -157,15 +157,16 @@
 
 عند مواجهة تحدي Cloudflare:
 
-- يتم تشغيل `WebView` غير مرئي في الخلفية
+- يتم تشغيل `WebView` غير مرئي في الخلفية عبر `CloudflareWebViewInterceptor`
 - يتم تحميل الصفحة بنفس ترويسات المتصفح الفعلية
-- يتم استخراج الكوكيز مثل `cf_clearance`
-- يتم تمريرها إلى عميل `OkHttp`
+- يتم استخراج الكوكيز مثل `cf_clearance` وUser-Agent الفعلي من الجلسة
+- يتم تمريرها إلى عميل `OkHttp` وطلبات `Jsoup` اللاحقة عبر `WebSessionStore`
 
 الملفات الأساسية:
 
 - `app/src/main/java/com/exapps/anistream/core/network/CloudflareChallengeInterceptor.kt`
-- `app/src/main/java/com/exapps/anistream/core/webview/WebViewCloudflareChallengeSolver.kt`
+- `app/src/main/java/com/exapps/anistream/core/webview/CloudflareWebViewInterceptor.kt`
+- `app/src/main/java/com/exapps/anistream/core/network/WebSessionStore.kt`
 
 ## البيانات المحلية
 
@@ -235,7 +236,7 @@
 - `app/build.gradle.kts`
 - `app/src/main/java/com/exapps/anistream/data/scraper/Anime3rbExtractor.kt`
 - `app/src/main/java/com/exapps/anistream/data/scraper/Anime3rbHtmlParser.kt`
-- `app/src/main/java/com/exapps/anistream/core/webview/WebViewCloudflareChallengeSolver.kt`
+- `app/src/main/java/com/exapps/anistream/core/webview/CloudflareWebViewInterceptor.kt`
 - `app/src/main/java/com/exapps/anistream/presentation/navigation/AniStreamNavGraph.kt`
 - `app/src/main/java/com/exapps/anistream/presentation/library/LibraryScreen.kt`
 - `app/src/main/java/com/exapps/anistream/presentation/settings/SettingsScreen.kt`
