@@ -12,6 +12,13 @@
     <string name="action_clear">مسح</string>
     <string name="action_done">تم</string>
 
+    <string name="cloudflare_title">تجهيز جلسة Anime3rb</string>
+    <string name="cloudflare_message">تظهر صفحة الموقع أولاً لتجاوز حماية Cloudflare وحفظ الكوكيز على الجهاز، ثم يبدأ الجلب المباشر.</string>
+    <string name="cloudflare_loading">جارٍ تحميل Anime3rb…</string>
+    <string name="cloudflare_waiting">بانتظار انتهاء حماية Cloudflare…</string>
+    <string name="cloudflare_ready">تم تحميل الصفحة. جاري حفظ الجلسة…</string>
+    <string name="cloudflare_error">تعذر تحميل صفحة Anime3rb.</string>
+
     <string name="home_search_label">ابحث في Anime3rb</string>
     <string name="home_search_supporting">يتم جلب البيانات مباشرة من Anime3rb.com باستخدام محددات تم التحقق منها محلياً.</string>
     <string name="home_hero_title">كل عالم الأنمي في مكان واحد</string>

@@ -1,7 +1,6 @@
 package com.exapps.anistream.data.scraper
 
 import com.exapps.anistream.core.common.DispatcherProvider
-import com.exapps.anistream.core.webview.CloudflareChallengeSolver
 import com.exapps.anistream.domain.model.AnimeDetails
 import com.exapps.anistream.domain.model.CatalogFilters
 import com.exapps.anistream.domain.model.EpisodeStream
@@ -24,7 +23,6 @@ class Anime3rbExtractor @Inject constructor(
     private val parser: Anime3rbHtmlParser,
     private val videoStreamResolver: VideoStreamResolver,
     private val autoFailoverPlaybackResolver: AutoFailoverPlaybackResolver,
-    private val cloudflareChallengeSolver: CloudflareChallengeSolver,
     private val dispatchers: DispatcherProvider,
 ) : AnimeExtractor {
 
@@ -119,23 +117,10 @@ class Anime3rbExtractor @Inject constructor(
 
     private suspend fun fetchDocument(url: String): Document {
         return withContext(dispatchers.io) {
-            val httpUrl = url.toHttpUrl()
-            cloudflareChallengeSolver.ensureClearance(httpUrl)
-            var request = Request.Builder().url(url).get().build()
+            val request = Request.Builder().url(url).get().build()
             client.newCall(request).execute().use { response ->
-                if (response.isSuccessful) {
-                    return@withContext Jsoup.parse(response.body?.string().orEmpty(), response.request.url.toString())
-                }
-
-                response.close()
-                cloudflareChallengeSolver.ensureClearance(httpUrl, forceRefresh = true)
-                request = request.newBuilder().build()
-                client.newCall(request).execute().use { retryResponse ->
-                    check(retryResponse.isSuccessful) {
-                        "Request failed: ${retryResponse.code} ${retryResponse.message}"
-                    }
-                    Jsoup.parse(retryResponse.body?.string().orEmpty(), retryResponse.request.url.toString())
-                }
+                check(response.isSuccessful) { "Request failed: ${response.code} ${response.message}" }
+                Jsoup.parse(response.body?.string().orEmpty(), response.request.url.toString())
             }
         }
     }

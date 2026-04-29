@@ -33,7 +33,10 @@ class MainActivity : ComponentActivity() {
             CompositionLocalProvider(LocalLayoutDirection provides LayoutDirection.Rtl) {
                 AniStreamTheme(dynamicColor = rootState.dynamicColors) {
                     Surface(modifier = Modifier.fillMaxSize()) {
-                        AniStreamNavGraph()
+                        AniStreamNavGraph(
+                            needsAnime3rbSession = rootState.needsAnime3rbSession,
+                            onAnime3rbSessionReady = rootViewModel::syncAnime3rbSession,
+                        )
                     }
                 }
             }
