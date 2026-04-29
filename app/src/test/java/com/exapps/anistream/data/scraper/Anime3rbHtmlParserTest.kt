@@ -48,6 +48,8 @@ class Anime3rbHtmlParserTest {
         assertEquals("Jujutsu Kaisen", details.title)
         assertEquals("منتهي", details.status)
         assertEquals("9.18", details.score)
+        assertEquals(989, details.ratingCount)
+        assertEquals("2020-10-03", details.publishedAt)
         assertEquals(24, details.episodeCount)
         assertTrue(details.synopsis.contains("يوجي إيتادوري"))
         assertTrue(details.genres.contains("أكشن"))
@@ -152,6 +154,7 @@ class Anime3rbHtmlParserTest {
                     <tr><td>الحالة:</td><td>منتهي</td></tr>
                     <tr><td>إصدار:</td><td>خريف 2020</td></tr>
                 </table>
+                <script type="application/ld+json">{"@type":"TVSeries","datePublished":"2020-10-03T00:00:00+00:00","aggregateRating":{"@type":"AggregateRating","ratingValue":9.18,"ratingCount":989}}</script>
                 <div class="video-list">
                     <a href="https://anime3rb.com/episode/jujutsu-kaisen/1"><img src="https://images.anime3rb.com/295921/164f0f91dcbd19.jpg"><span class="rounded">23:59</span><div class="video-data"><span>الحلقة 1</span><p>ريومين سوكونا</p></div></a>
                     <a href="https://anime3rb.com/episode/jujutsu-kaisen/2"><img src="https://images.anime3rb.com/295921/164f0f91dcbd19.jpg"><span class="rounded">23:59</span><div class="video-data"><span>الحلقة 2</span><p>من أجل نفسي</p></div></a>

@@ -2,7 +2,9 @@ package com.exapps.anistream.data.scraper
 
 import com.exapps.anistream.core.common.DispatcherProvider
 import com.exapps.anistream.domain.model.AnimeDetails
+import com.exapps.anistream.domain.model.CatalogCategory
 import com.exapps.anistream.domain.model.CatalogFilters
+import com.exapps.anistream.domain.model.CatalogSort
 import com.exapps.anistream.domain.model.EpisodeStream
 import com.exapps.anistream.domain.model.HomeFeed
 import com.exapps.anistream.domain.model.PaginatedTitles
@@ -30,17 +32,18 @@ class Anime3rbExtractor @Inject constructor(
         return parser.parseHome(fetchDocument(BASE_URL))
     }
 
+    override suspend fun getCatalog(category: CatalogCategory, page: Int, filters: CatalogFilters): PaginatedTitles {
+        val url = BASE_URL.toHttpUrl().newBuilder()
+            .addPathSegments(category.path)
+            .addCatalogFilters(page, filters)
+            .build()
+        return parser.parseCatalog(fetchDocument(url.toString()), page)
+    }
+
     override suspend fun getCatalog(page: Int, filters: CatalogFilters): PaginatedTitles {
         val url = BASE_URL.toHttpUrl().newBuilder()
             .addPathSegments("titles/list")
-            .addQueryParameter("sort_by", filters.sort.wireValue)
-            .addQueryParameter("sort_dir", filters.direction.wireValue)
-            .apply { filters.season?.let { addQueryParameter("season", it) } }
-            .apply { filters.year?.let { addQueryParameter("year", it.toString()) } }
-            .apply { filters.genreSlug?.let { addQueryParameter("genres", it) } }
-            .apply { filters.status?.let { addQueryParameter("status", it) } }
-            .apply { filters.ageRating?.let { addQueryParameter("age", it) } }
-            .apply { if (page > 1) addQueryParameter("page", page.toString()) }
+            .addCatalogFilters(page, filters)
             .build()
         return parser.parseCatalog(fetchDocument(url.toString()), page)
     }
@@ -49,14 +52,8 @@ class Anime3rbExtractor @Inject constructor(
         val url = BASE_URL.toHttpUrl().newBuilder()
             .addPathSegment("search")
             .addQueryParameter("q", query)
-            .addQueryParameter("sort_by", filters.sort.wireValue)
-            .addQueryParameter("sort_dir", filters.direction.wireValue)
-            .apply { filters.season?.let { addQueryParameter("season", it) } }
-            .apply { filters.year?.let { addQueryParameter("year", it.toString()) } }
-            .apply { filters.genreSlug?.let { addQueryParameter("genres", it) } }
-            .apply { filters.status?.let { addQueryParameter("status", it) } }
-            .apply { filters.ageRating?.let { addQueryParameter("age", it) } }
-            .apply { if (page > 1) addQueryParameter("page", page.toString()) }
+            .addQueryParameter("deep", "1")
+            .addCatalogFilters(page, filters, includeDefaultSort = false)
             .build()
         return parser.parseSearch(fetchDocument(url.toString()), page)
     }
@@ -123,6 +120,36 @@ class Anime3rbExtractor @Inject constructor(
                 Jsoup.parse(response.body?.string().orEmpty(), response.request.url.toString())
             }
         }
+    }
+
+    private fun okhttp3.HttpUrl.Builder.addCatalogFilters(
+        page: Int,
+        filters: CatalogFilters,
+        includeDefaultSort: Boolean = true,
+    ): okhttp3.HttpUrl.Builder {
+        if (includeDefaultSort || filters.sort != CatalogSort.ADDITION_DATE) {
+            addQueryParameter("sort_by", filters.sort.wireValue)
+        }
+        addQueryParameter("sort_dir", filters.direction.wireValue)
+        filters.season?.let {
+            addQueryParameter("season", it)
+            addQueryParameter("release_season", it)
+        }
+        filters.year?.let {
+            addQueryParameter("year", it.toString())
+            addQueryParameter("release_year", it.toString())
+        }
+        filters.genreSlug?.let {
+            addQueryParameter("genres", it)
+            addQueryParameter("genre", it)
+        }
+        filters.status?.let { addQueryParameter("status", it) }
+        filters.ageRating?.let {
+            addQueryParameter("age", it)
+            addQueryParameter("age_ratings", it)
+        }
+        if (page > 1) addQueryParameter("page", page.toString())
+        return this
     }
 
     private companion object {

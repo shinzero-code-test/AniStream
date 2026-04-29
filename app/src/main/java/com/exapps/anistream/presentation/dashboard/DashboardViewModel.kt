@@ -3,6 +3,7 @@ package com.exapps.anistream.presentation.dashboard
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.exapps.anistream.domain.model.AnimeCard
+import com.exapps.anistream.domain.model.CatalogCategory
 import com.exapps.anistream.domain.model.CatalogFilters
 import com.exapps.anistream.domain.model.CatalogSort
 import com.exapps.anistream.domain.model.EpisodeCard
@@ -231,6 +232,7 @@ data class DashboardUiState(
     val searchResults: List<AnimeCard> = emptyList(),
     val searchPage: Int = 1,
     val hasMoreSearchResults: Boolean = false,
+    val catalogCategories: List<CatalogCategory> = CatalogCategory.entries,
     val catalogFilters: CatalogFilters = CatalogFilters(),
     val errorMessage: String? = null,
 )

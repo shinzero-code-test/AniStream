@@ -7,6 +7,7 @@ import com.exapps.anistream.data.local.WatchlistDao
 import com.exapps.anistream.data.preferences.UserPreferencesDataSource
 import com.exapps.anistream.data.scraper.AnimeExtractor
 import com.exapps.anistream.domain.model.AnimeDetails
+import com.exapps.anistream.domain.model.CatalogCategory
 import com.exapps.anistream.domain.model.CatalogFilters
 import com.exapps.anistream.domain.model.EpisodeStream
 import com.exapps.anistream.domain.model.HomeFeed
@@ -29,6 +30,10 @@ class AnimeRepositoryImpl @Inject constructor(
 ) : AnimeRepository {
 
     override suspend fun getHomeFeed(): HomeFeed = extractor.getHomeFeed()
+
+    override suspend fun getCatalog(category: CatalogCategory, page: Int, filters: CatalogFilters): PaginatedTitles {
+        return extractor.getCatalog(category, page, filters)
+    }
 
     override suspend fun getCatalog(page: Int, filters: CatalogFilters): PaginatedTitles {
         return extractor.getCatalog(page, filters)

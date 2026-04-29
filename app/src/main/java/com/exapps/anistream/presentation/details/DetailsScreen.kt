@@ -363,6 +363,8 @@ private fun MetadataGrid(details: AnimeDetails) {
         metadataCard(label = stringResource(id = R.string.label_studio), value = details.studio)
         metadataCard(label = stringResource(id = R.string.label_author), value = details.author)
         metadataCard(label = stringResource(id = R.string.label_score), value = details.score)
+        metadataCard(label = stringResource(id = R.string.label_rating_count), value = details.ratingCount?.toString())
+        metadataCard(label = stringResource(id = R.string.label_published_at), value = details.publishedAt)
         metadataCard(label = stringResource(id = R.string.label_episodes), value = details.episodeCount?.toString())
         metadataCard(label = stringResource(id = R.string.label_age), value = details.ageRating)
     }

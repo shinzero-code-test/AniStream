@@ -22,6 +22,8 @@ import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
 import androidx.media3.common.util.UnstableApi
 import com.exapps.anistream.R
+import com.exapps.anistream.presentation.catalog.CatalogScreen
+import com.exapps.anistream.presentation.catalog.CatalogViewModel
 import com.exapps.anistream.presentation.dashboard.DashboardScreen
 import com.exapps.anistream.presentation.dashboard.DashboardViewModel
 import com.exapps.anistream.presentation.details.DetailsScreen
@@ -141,6 +143,16 @@ fun AniStreamNavGraph(
                                 PlayerRoute(titleSlug = titleSlug, episodeNumber = episodeNumber),
                             )
                         },
+                        onOpenCatalog = { category -> navController.navigate(CatalogRoute(categoryPath = category.path)) },
+                    )
+                }
+
+                composable<CatalogRoute> {
+                    val viewModel = hiltViewModel<CatalogViewModel>()
+                    CatalogScreen(
+                        viewModel = viewModel,
+                        onBack = navController::popBackStack,
+                        onOpenDetails = { slug -> navController.navigate(DetailsRoute(slug = slug)) },
                     )
                 }
 

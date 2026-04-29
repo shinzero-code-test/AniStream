@@ -51,10 +51,11 @@ class AutoFailoverPlaybackResolver @Inject constructor(
             val attemptedServerIds = mutableListOf<String>()
 
             if (orderedServers.isEmpty() && !stream.playbackUrl.isNullOrBlank()) {
+                val playableSources = resolvePlayableSources(stream.playbackUrl, stream.refererUrl)
                 return@withContext PlaybackAttemptResult(
-                    playbackUrl = stream.playbackUrl,
+                    playbackUrl = playableSources.firstOrNull()?.url ?: stream.playbackUrl,
                     selectedServerId = stream.selectedServerId,
-                    playableSources = resolvePlayableSources(stream.playbackUrl, stream.refererUrl),
+                    playableSources = playableSources,
                     attemptedServerIds = emptyList(),
                 )
             }
@@ -134,8 +135,10 @@ class AutoFailoverPlaybackResolver @Inject constructor(
     }
 
     private suspend fun resolvePlayableSources(playerUrl: String, refererUrl: String): List<VideoSource> {
-        return videoStreamResolver.resolve(playerUrl = playerUrl, refererUrl = refererUrl)
-            .filter { it.type == StreamType.HLS || it.type == StreamType.MP4 || it.type == StreamType.MKV }
+        return runCatching {
+            videoStreamResolver.resolve(playerUrl = playerUrl, refererUrl = refererUrl)
+                .filter { it.type == StreamType.HLS || it.type == StreamType.MP4 || it.type == StreamType.MKV }
+        }.getOrDefault(emptyList())
     }
 
     private fun extractVideoUrlFromSnapshot(snapshot: String): String? {

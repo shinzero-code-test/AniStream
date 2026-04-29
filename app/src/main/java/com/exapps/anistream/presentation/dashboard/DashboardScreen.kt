@@ -39,6 +39,7 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.exapps.anistream.R
 import com.exapps.anistream.domain.model.AnimeCard
+import com.exapps.anistream.domain.model.CatalogCategory
 import com.exapps.anistream.domain.model.CatalogSort
 import com.exapps.anistream.domain.model.EpisodeCard
 import com.exapps.anistream.domain.model.PlaybackHistory
@@ -56,6 +57,7 @@ fun DashboardScreen(
     viewModel: DashboardViewModel,
     onOpenDetails: (String) -> Unit,
     onOpenEpisode: (String, Int) -> Unit,
+    onOpenCatalog: (CatalogCategory) -> Unit,
 ) {
     val state by viewModel.uiState.collectAsStateWithLifecycle()
 
@@ -94,6 +96,23 @@ fun DashboardScreen(
             contentPadding = PaddingValues(16.dp),
             verticalArrangement = Arrangement.spacedBy(20.dp),
         ) {
+            item {
+                SectionTitle(
+                    title = stringResource(id = R.string.catalog_categories_title),
+                    subtitle = stringResource(id = R.string.catalog_categories_subtitle),
+                )
+                Spacer(modifier = Modifier.height(10.dp))
+                FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                    state.catalogCategories.forEach { category ->
+                        FilterChip(
+                            selected = false,
+                            onClick = { onOpenCatalog(category) },
+                            label = { Text(category.label) },
+                        )
+                    }
+                }
+            }
+
             item {
                 GradientHeroCard(
                     title = stringResource(id = R.string.home_hero_title),
@@ -408,7 +427,7 @@ private fun HistoryCardCompact(item: PlaybackHistory, onClick: () -> Unit) {
 }
 
 @Composable
-private fun CatalogSort.label(): String {
+fun CatalogSort.label(): String {
     return when (this) {
         CatalogSort.ADDITION_DATE -> stringResource(id = R.string.catalog_sort_addition_date)
         CatalogSort.NAME -> stringResource(id = R.string.catalog_sort_name)

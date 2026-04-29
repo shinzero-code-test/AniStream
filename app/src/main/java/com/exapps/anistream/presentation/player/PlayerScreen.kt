@@ -1,6 +1,10 @@
 package com.exapps.anistream.presentation.player
 
 import android.view.ViewGroup.LayoutParams.MATCH_PARENT
+import android.webkit.WebChromeClient
+import android.webkit.WebSettings
+import android.webkit.WebView
+import android.webkit.WebViewClient
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -112,6 +116,11 @@ fun PlayerScreen(
                 val playableSources = stream.availableSources.filter {
                     it.type == StreamType.HLS || it.type == StreamType.MP4 || it.type == StreamType.MKV
                 }
+                val embeddedPlayerUrl = stream.availableSources
+                    .firstOrNull { it.type == StreamType.PLAYER_PAGE && it.url.isNotBlank() }
+                    ?.url
+                    ?: stream.iframeUrl
+                    ?: stream.playbackUrl?.takeUnless { it.contains(".m3u8") || it.contains(".mp4") || it.contains(".mkv") }
                 var selectedUrl by rememberSaveable(stream.titleSlug, stream.episodeNumber, stream.playbackUrl, stream.selectedServerId) {
                     mutableStateOf(
                         playableSources.firstOrNull()?.url
@@ -183,21 +192,55 @@ fun PlayerScreen(
                             colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
                         ) {
                             Column(modifier = Modifier.padding(12.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
-                                if (selectedUrl != null) {
-                                    AndroidView(
-                                        modifier = Modifier
-                                            .fillMaxWidth()
-                                            .height(playerHeight),
-                                        factory = { ctx ->
-                                            PlayerView(ctx).apply {
-                                                layoutParams = android.view.ViewGroup.LayoutParams(MATCH_PARENT, MATCH_PARENT)
-                                                useController = true
-                                                resizeMode = AspectRatioFrameLayout.RESIZE_MODE_FIT
-                                                player = exoPlayer
-                                            }
-                                        },
-                                        update = { view -> view.player = exoPlayer },
-                                    )
+                                when {
+                                    selectedUrl != null -> {
+                                        AndroidView(
+                                            modifier = Modifier
+                                                .fillMaxWidth()
+                                                .height(playerHeight),
+                                            factory = { ctx ->
+                                                PlayerView(ctx).apply {
+                                                    layoutParams = android.view.ViewGroup.LayoutParams(MATCH_PARENT, MATCH_PARENT)
+                                                    useController = true
+                                                    resizeMode = AspectRatioFrameLayout.RESIZE_MODE_FIT
+                                                    player = exoPlayer
+                                                }
+                                            },
+                                            update = { view -> view.player = exoPlayer },
+                                        )
+                                    }
+
+                                    !embeddedPlayerUrl.isNullOrBlank() -> {
+                                        AndroidView(
+                                            modifier = Modifier
+                                                .fillMaxWidth()
+                                                .height(playerHeight),
+                                            factory = { ctx ->
+                                                WebView(ctx).apply {
+                                                    settings.javaScriptEnabled = true
+                                                    settings.domStorageEnabled = true
+                                                    settings.mediaPlaybackRequiresUserGesture = false
+                                                    settings.cacheMode = WebSettings.LOAD_DEFAULT
+                                                    webChromeClient = WebChromeClient()
+                                                    webViewClient = WebViewClient()
+                                                    loadUrl(embeddedPlayerUrl)
+                                                }
+                                            },
+                                            update = { webView ->
+                                                if (webView.url != embeddedPlayerUrl) {
+                                                    webView.loadUrl(embeddedPlayerUrl)
+                                                }
+                                            },
+                                        )
+                                    }
+
+                                    else -> {
+                                        Text(
+                                            text = stringResource(id = R.string.player_empty),
+                                            style = MaterialTheme.typography.bodyMedium,
+                                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                        )
+                                    }
                                 }
 
                                 Text(
@@ -283,12 +326,18 @@ fun PlayerScreen(
                         }
                     }
 
-                    if (playableSources.isNotEmpty()) {
+                    if (playableSources.isNotEmpty() || !embeddedPlayerUrl.isNullOrBlank()) {
                         item {
                             Text(text = stringResource(id = R.string.player_sources_title), style = MaterialTheme.typography.titleMedium)
                         }
                         item {
                             FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                                if (!embeddedPlayerUrl.isNullOrBlank()) {
+                                    AssistChip(
+                                        onClick = { selectedUrl = null },
+                                        label = { Text(stringResource(id = R.string.player_source_embedded)) },
+                                    )
+                                }
                                 playableSources.forEach { source ->
                                     AssistChip(
                                         onClick = { selectedUrl = source.url },

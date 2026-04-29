@@ -42,6 +42,9 @@
     <string name="section_latest_titles_subtitle">قائمة الأعمال الجديدة مباشرة من Anime3rb.</string>
     <string name="section_catalog_title">فهرس الأنمي</string>
     <string name="section_catalog_subtitle">يدعم الترتيب والتحميل التدريجي من الموقع.</string>
+    <string name="catalog_categories_title">قوائم Anime3rb</string>
+    <string name="catalog_categories_subtitle">افتح قوائم الأنمي، الأفلام، OVA، ONA، الحلقات الخاصة والمزيد.</string>
+    <string name="catalog_screen_subtitle">قائمة مباشرة من Anime3rb حسب النوع المحدد.</string>
     <string name="catalog_sort_label">ترتيب الفهرس</string>
     <string name="catalog_sort_addition_date">تاريخ الإضافة</string>
     <string name="catalog_sort_name">الاسم</string>
@@ -112,6 +115,8 @@
     <string name="label_score">التقييم</string>
     <string name="label_episodes">الحلقات</string>
     <string name="label_age">التصنيف العمري</string>
+    <string name="label_published_at">تاريخ العرض</string>
+    <string name="label_rating_count">عدد التقييمات</string>
     <string name="label_views">مشاهدة</string>
 
     <string name="episode_row_title">الحلقة %1$d</string>

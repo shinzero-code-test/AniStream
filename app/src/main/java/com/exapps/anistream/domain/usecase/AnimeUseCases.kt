@@ -1,6 +1,7 @@
 package com.exapps.anistream.domain.usecase
 
 import com.exapps.anistream.domain.model.AnimeDetails
+import com.exapps.anistream.domain.model.CatalogCategory
 import com.exapps.anistream.domain.model.CatalogFilters
 import com.exapps.anistream.domain.model.EpisodeStream
 import com.exapps.anistream.domain.model.HomeFeed
@@ -22,6 +23,12 @@ class GetHomeFeedUseCase @Inject constructor(
 class GetCatalogUseCase @Inject constructor(
     private val repository: AnimeRepository,
 ) {
+    suspend operator fun invoke(
+        category: CatalogCategory,
+        page: Int = 1,
+        filters: CatalogFilters = CatalogFilters(),
+    ): PaginatedTitles = repository.getCatalog(category, page, filters)
+
     suspend operator fun invoke(
         page: Int = 1,
         filters: CatalogFilters = CatalogFilters(),

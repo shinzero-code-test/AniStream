@@ -92,6 +92,7 @@ class Anime3rbHtmlParser @Inject constructor() {
     fun parseDetails(document: Document, slug: String): AnimeDetails {
         val structuredTitle = document.structuredDataObjects()
             .firstOrNull { it.typeName() in TITLE_SCHEMA_TYPES }
+        val aggregateRating = structuredTitle?.get("aggregateRating")?.jsonObjectOrNull()
         val titleHeader = document.selectFirst("h1.text-2xl")
         val title = titleHeader?.selectFirst("span[dir=ltr]")?.text()?.trim()
             ?: structuredTitle?.stringValue("name")?.cleanSiteSuffix()
@@ -135,6 +136,7 @@ class Anime3rbHtmlParser @Inject constructor() {
             ?.select("h2")
             ?.eachText()
             .orEmpty()
+            .ifEmpty { structuredTitle?.stringListValue("alternateName").orEmpty() }
 
         val externalLinks = contentRoot
             .findLabeledBlock("المصادر")
@@ -172,7 +174,11 @@ class Anime3rbHtmlParser @Inject constructor() {
             studio = detailsTable.valueForLabel("الاستديو:"),
             author = detailsTable.valueForLabel("المؤلف:"),
             ageRating = metrics.metricValue("التصنيف العمري"),
-            score = metrics.metricValue("التقييم"),
+            score = metrics.metricValue("التقييم")
+                ?: aggregateRating?.stringValue("ratingValue")
+                ?: aggregateRating?.doubleValue("ratingValue")?.trimTrailingZero(),
+            ratingCount = aggregateRating?.intValue("ratingCount"),
+            publishedAt = structuredTitle?.stringValue("datePublished")?.substringBefore("T"),
             episodeCount = metrics.metricValue("الحلقات")?.toIntOrNull()
                 ?: structuredTitle?.intValue("numberOfEpisodes")
                 ?: episodes.size.takeIf { it > 0 },
@@ -274,7 +280,7 @@ class Anime3rbHtmlParser @Inject constructor() {
                 qualityLabel = quality.ifBlank { link.text().trim() },
                 url = url,
             )
-        }
+        }.filterNot { it.url == batchDownloadUrl }
 
         return EpisodeStream(
             titleSlug = titleSlug,
@@ -507,6 +513,10 @@ class Anime3rbHtmlParser @Inject constructor() {
         return this[key]?.jsonPrimitiveOrNull()?.intOrNull
     }
 
+    private fun JsonObject.doubleValue(key: String): Double? {
+        return this[key]?.jsonPrimitiveOrNull()?.contentOrNull?.toDoubleOrNull()
+    }
+
     private fun JsonObject.stringListValue(key: String): List<String> {
         val element = this[key] ?: return emptyList()
         return when (element) {
@@ -520,6 +530,10 @@ class Anime3rbHtmlParser @Inject constructor() {
     private fun String.cleanSiteSuffix(): String = substringBefore(" - Anime3rb").trim()
 
     private fun String.htmlDecoded(): String = replace("&amp;", "&")
+
+    private fun Double.trimTrailingZero(): String {
+        return if (this % 1.0 == 0.0) toInt().toString() else toString()
+    }
 
     private companion object {
         val json = Json {

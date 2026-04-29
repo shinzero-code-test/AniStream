@@ -12,6 +12,9 @@ object LibraryRoute
 object SettingsRoute
 
 @Serializable
+data class CatalogRoute(val categoryPath: String)
+
+@Serializable
 data class DetailsRoute(val slug: String)
 
 @Serializable
