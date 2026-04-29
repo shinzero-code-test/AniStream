@@ -10,8 +10,13 @@ import android.os.Environment
 import androidx.core.app.NotificationCompat
 import androidx.core.content.ContextCompat
 import androidx.lifecycle.LifecycleService
-import com.arthenica.ffmpegkit.FFmpegKit
-import com.arthenica.ffmpegkit.ReturnCode
+import androidx.media3.common.MediaItem
+import androidx.media3.common.MimeTypes
+import androidx.media3.transformer.Composition
+import androidx.media3.transformer.EditedMediaItem
+import androidx.media3.transformer.ExportException
+import androidx.media3.transformer.ExportResult
+import androidx.media3.transformer.Transformer
 import com.exapps.anistream.R
 import com.exapps.anistream.core.common.DispatcherProvider
 import com.exapps.anistream.domain.model.StreamType
@@ -23,8 +28,6 @@ import kotlinx.coroutines.cancel
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.suspendCancellableCoroutine
 import kotlinx.coroutines.withContext
-import okhttp3.OkHttpClient
-import okhttp3.Request
 import java.io.File
 import javax.inject.Inject
 import kotlin.coroutines.resume
@@ -37,14 +40,12 @@ class AnimeDownloadService : LifecycleService() {
     lateinit var getEpisodeStreamUseCase: GetEpisodeStreamUseCase
 
     @Inject
-    lateinit var okHttpClient: OkHttpClient
-
-    @Inject
     lateinit var dispatcherProvider: DispatcherProvider
 
     private val serviceScope by lazy {
         CoroutineScope(SupervisorJob() + dispatcherProvider.main)
     }
+    private var activeTransformer: Transformer? = null
 
     override fun onCreate() {
         super.onCreate()
@@ -53,7 +54,10 @@ class AnimeDownloadService : LifecycleService() {
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
         when (intent?.action) {
-            ACTION_CANCEL -> stopSelf()
+            ACTION_CANCEL -> {
+                activeTransformer?.cancel()
+                stopSelf()
+            }
             ACTION_START_DOWNLOAD -> {
                 val request = DownloadRequest.fromIntent(intent) ?: return Service.START_NOT_STICKY
                 startForeground(
@@ -106,133 +110,57 @@ class AnimeDownloadService : LifecycleService() {
         } ?: error(getString(R.string.download_no_source))
 
         val outputFile = buildOutputFile(request = request, sourceType = selectedSource.type)
-
-        when (selectedSource.type) {
-            StreamType.HLS -> transcodeHlsToMp4(
-                manifestUrl = selectedSource.url,
-                refererUrl = stream.refererUrl,
-                outputFile = outputFile,
-                title = request.displayTitle,
-            )
-
-            StreamType.MP4,
-            StreamType.MKV,
-            -> downloadProgressiveFile(
-                sourceUrl = selectedSource.url,
-                refererUrl = stream.refererUrl,
-                outputFile = outputFile,
-                title = request.displayTitle,
-            )
-
-            else -> error(getString(R.string.download_no_source))
-        }
+        exportStreamToFile(sourceUrl = selectedSource.url, outputFile = outputFile, title = request.displayTitle)
     }
 
-    private suspend fun transcodeHlsToMp4(
-        manifestUrl: String,
-        refererUrl: String,
+    private suspend fun exportStreamToFile(
+        sourceUrl: String,
         outputFile: File,
         title: String,
-    ) = withContext(dispatcherProvider.io) {
-        val expectedDurationMs = estimateManifestDurationMs(manifestUrl, refererUrl)
-        val command = listOf(
-            "-y",
-            "-headers", "Referer: $refererUrl\\r\\nOrigin: https://anime3rb.com",
-            "-i", manifestUrl,
-            "-c", "copy",
-            outputFile.absolutePath,
-        ).joinToString(separator = " ")
-
+    ) = withContext(dispatcherProvider.main) {
         suspendCancellableCoroutine<Unit> { continuation ->
-            val session = FFmpegKit.executeAsync(
-                command,
-                { ffmpegSession ->
-                    if (ReturnCode.isSuccess(ffmpegSession.returnCode)) {
-                        continuation.resume(Unit)
-                    } else {
-                        continuation.resumeWithException(
-                            IllegalStateException(getString(R.string.download_failed)),
-                        )
-                    }
-                },
-                { },
-                { statistics ->
-                    val progress = expectedDurationMs
-                        ?.takeIf { it > 0L }
-                        ?.let { duration -> ((statistics.time.toDouble() / duration) * 100.0).toInt().coerceIn(0, 100) }
-                    updateNotification(
-                        title = title,
-                        text = getString(R.string.download_in_progress),
-                        progress = progress ?: 0,
-                        ongoing = true,
-                        indeterminate = progress == null,
-                    )
-                },
+            updateNotification(
+                title = title,
+                text = getString(R.string.download_in_progress),
+                progress = 0,
+                ongoing = true,
+                indeterminate = true,
             )
+
+            val transformer = Transformer.Builder(this@AnimeDownloadService)
+                .setVideoMimeType(MimeTypes.VIDEO_H264)
+                .setAudioMimeType(MimeTypes.AUDIO_AAC)
+                .addListener(
+                    object : Transformer.Listener {
+                        override fun onCompleted(composition: Composition, result: ExportResult) {
+                            activeTransformer = null
+                            if (!continuation.isCompleted) {
+                                continuation.resume(Unit)
+                            }
+                        }
+
+                        override fun onError(
+                            composition: Composition,
+                            exportResult: ExportResult,
+                            exportException: ExportException,
+                        ) {
+                            activeTransformer = null
+                            if (!continuation.isCompleted) {
+                                continuation.resumeWithException(exportException)
+                            }
+                        }
+                    },
+                )
+                .build()
+
+            activeTransformer = transformer
+
+            val editedMediaItem = EditedMediaItem.Builder(MediaItem.fromUri(sourceUrl)).build()
+            transformer.start(editedMediaItem, outputFile.absolutePath)
 
             continuation.invokeOnCancellation {
-                FFmpegKit.cancel(session.sessionId)
-            }
-        }
-    }
-
-    private suspend fun downloadProgressiveFile(
-        sourceUrl: String,
-        refererUrl: String,
-        outputFile: File,
-        title: String,
-    ) = withContext(dispatcherProvider.io) {
-        val request = Request.Builder()
-            .url(sourceUrl)
-            .header("Referer", refererUrl)
-            .build()
-
-        okHttpClient.newCall(request).execute().use { response ->
-            check(response.isSuccessful) { getString(R.string.download_failed) }
-            val body = response.body ?: error(getString(R.string.download_failed))
-            val totalBytes = body.contentLength().takeIf { it > 0L }
-            var downloaded = 0L
-
-            body.byteStream().use { input ->
-                outputFile.outputStream().use { output ->
-                    val buffer = ByteArray(8 * 1024)
-                    while (true) {
-                        val read = input.read(buffer)
-                        if (read == -1) break
-                        output.write(buffer, 0, read)
-                        downloaded += read
-                        val progress = totalBytes?.let { ((downloaded.toDouble() / it) * 100.0).toInt().coerceIn(0, 100) }
-                        updateNotification(
-                            title = title,
-                            text = getString(R.string.download_in_progress),
-                            progress = progress ?: 0,
-                            ongoing = true,
-                            indeterminate = progress == null,
-                        )
-                    }
-                }
-            }
-        }
-    }
-
-    private suspend fun estimateManifestDurationMs(manifestUrl: String, refererUrl: String): Long? {
-        return withContext(dispatcherProvider.io) {
-            val request = Request.Builder()
-                .url(manifestUrl)
-                .header("Referer", refererUrl)
-                .build()
-            okHttpClient.newCall(request).execute().use { response ->
-                if (!response.isSuccessful) return@withContext null
-                val body = response.body?.string().orEmpty()
-                val durationSeconds = Regex("#EXTINF:([0-9]+(?:\\.[0-9]+)?)")
-                    .findAll(body)
-                    .mapNotNull { it.groupValues.getOrNull(1)?.toDoubleOrNull() }
-                    .sum()
-                return@withContext if (durationSeconds > 0.0) {
-                    (durationSeconds * 1000.0).toLong()
-                } else {
-                    null
-                }
+                transformer.cancel()
+                activeTransformer = null
             }
         }
     }
