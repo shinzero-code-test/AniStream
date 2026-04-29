@@ -121,10 +121,21 @@ class Anime3rbExtractor @Inject constructor(
         return withContext(dispatchers.io) {
             val httpUrl = url.toHttpUrl()
             cloudflareChallengeSolver.ensureClearance(httpUrl)
-            val request = Request.Builder().url(url).get().build()
+            var request = Request.Builder().url(url).get().build()
             client.newCall(request).execute().use { response ->
-                check(response.isSuccessful) { "Request failed: ${response.code} ${response.message}" }
-                Jsoup.parse(response.body?.string().orEmpty(), response.request.url.toString())
+                if (response.isSuccessful) {
+                    return@withContext Jsoup.parse(response.body?.string().orEmpty(), response.request.url.toString())
+                }
+
+                response.close()
+                cloudflareChallengeSolver.ensureClearance(httpUrl, forceRefresh = true)
+                request = request.newBuilder().build()
+                client.newCall(request).execute().use { retryResponse ->
+                    check(retryResponse.isSuccessful) {
+                        "Request failed: ${retryResponse.code} ${retryResponse.message}"
+                    }
+                    Jsoup.parse(retryResponse.body?.string().orEmpty(), retryResponse.request.url.toString())
+                }
             }
         }
     }

@@ -22,7 +22,7 @@ class CloudflareChallengeInterceptor @Inject constructor(
 
         response.close()
         runBlocking {
-            solver.ensureClearance(request.url)
+            solver.ensureClearance(request.url, forceRefresh = true)
         }
 
         return chain.proceed(

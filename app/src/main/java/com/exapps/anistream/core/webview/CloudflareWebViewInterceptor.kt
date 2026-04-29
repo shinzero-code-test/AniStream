@@ -39,11 +39,11 @@ class CloudflareWebViewInterceptor @Inject constructor(
 
     private val mutex = Mutex()
 
-    override suspend fun ensureClearance(url: HttpUrl) {
-        if (sessionStore.hasFreshSession(url)) return
+    override suspend fun ensureClearance(url: HttpUrl, forceRefresh: Boolean) {
+        if (!forceRefresh && sessionStore.hasFreshSession(url)) return
 
         mutex.withLock {
-            if (sessionStore.hasFreshSession(url)) return
+            if (!forceRefresh && sessionStore.hasFreshSession(url)) return
 
             withTimeout(45_000) {
                 withContext(dispatchers.main) {
@@ -58,6 +58,7 @@ class CloudflareWebViewInterceptor @Inject constructor(
                         val webView = WebView(appContext)
                         val mainHandler = Handler(Looper.getMainLooper())
                         val cleanedUp = AtomicBoolean(false)
+                        val pollingStarted = AtomicBoolean(false)
                         runCatching { cookieManager.setAcceptThirdPartyCookies(webView, true) }
 
                         fun cleanup() {
@@ -84,6 +85,38 @@ class CloudflareWebViewInterceptor @Inject constructor(
                         webView.isVerticalScrollBarEnabled = false
                         webView.isHorizontalScrollBarEnabled = false
                         webView.webChromeClient = WebChromeClient()
+                        fun tryComplete(pageUrl: String) {
+                            if (continuation.isCompleted) return
+
+                            val resolvedUrl = pageUrl.toHttpUrlOrNull() ?: url
+                            val cookieHeader = cookieManager.getCookie(pageUrl)
+                                ?: cookieManager.getCookie(url.toString())
+                                .orEmpty()
+                            val currentUserAgent = webView.settings.userAgentString.orEmpty()
+                            if (currentUserAgent.isNotBlank()) {
+                                sessionStore.updateUserAgent(currentUserAgent)
+                            }
+
+                            val title = webView.title.orEmpty()
+                            val solved = cookieHeader.contains("cf_clearance") ||
+                                (
+                                    title.isNotBlank() &&
+                                        !title.contains("Just a moment", ignoreCase = true) &&
+                                        !title.contains("Attention Required", ignoreCase = true)
+                                    )
+
+                            if (!solved) {
+                                mainHandler.postDelayed({ tryComplete(pageUrl) }, SOLVE_POLL_INTERVAL_MS)
+                                return
+                            }
+
+                            cookieManager.flush()
+                            cookieStore.saveFromHeader(resolvedUrl, cookieHeader)
+                            sessionStore.markSessionAcquired(resolvedUrl)
+                            continuation.resume(Unit)
+                            cleanup()
+                        }
+
                         webView.webViewClient = object : WebViewClient() {
                             override fun onPageStarted(view: WebView, pageUrl: String, favicon: Bitmap?) {
                                 val currentUserAgent = view.settings.userAgentString.orEmpty()
@@ -93,30 +126,8 @@ class CloudflareWebViewInterceptor @Inject constructor(
                             }
 
                             override fun onPageFinished(view: WebView, pageUrl: String) {
-                                view.postDelayed({
-                                    if (continuation.isCompleted) return@postDelayed
-
-                                    val resolvedUrl = pageUrl.toHttpUrlOrNull() ?: url
-                                    val cookieHeader = cookieManager.getCookie(pageUrl)
-                                        ?: cookieManager.getCookie(url.toString())
-                                        .orEmpty()
-                                    val currentUserAgent = view.settings.userAgentString.orEmpty()
-                                    if (currentUserAgent.isNotBlank()) {
-                                        sessionStore.updateUserAgent(currentUserAgent)
-                                    }
-
-                                    val solved = cookieHeader.contains("cf_clearance") ||
-                                        (!view.title.orEmpty().contains("Just a moment", ignoreCase = true) &&
-                                            !view.title.orEmpty().contains("Attention Required", ignoreCase = true))
-
-                                    if (!solved) return@postDelayed
-
-                                    cookieManager.flush()
-                                    cookieStore.saveFromHeader(resolvedUrl, cookieHeader)
-                                    sessionStore.markSessionAcquired(resolvedUrl)
-                                    continuation.resume(Unit)
-                                    cleanup()
-                                }, 900)
+                                if (!pollingStarted.compareAndSet(false, true)) return
+                                view.postDelayed({ tryComplete(pageUrl) }, SOLVE_POLL_INTERVAL_MS)
                             }
 
                             override fun onReceivedError(
@@ -138,5 +149,9 @@ class CloudflareWebViewInterceptor @Inject constructor(
                 }
             }
         }
+    }
+
+    private companion object {
+        const val SOLVE_POLL_INTERVAL_MS = 1_000L
     }
 }
