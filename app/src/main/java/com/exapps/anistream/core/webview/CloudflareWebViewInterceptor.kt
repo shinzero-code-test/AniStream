@@ -2,6 +2,7 @@ package com.exapps.anistream.core.webview
 
 import android.content.Context
 import android.graphics.Bitmap
+import android.os.Handler
 import android.os.Looper
 import android.webkit.CookieManager
 import android.webkit.WebChromeClient
@@ -22,6 +23,7 @@ import kotlinx.coroutines.withContext
 import kotlinx.coroutines.withTimeout
 import okhttp3.HttpUrl
 import okhttp3.HttpUrl.Companion.toHttpUrlOrNull
+import java.util.concurrent.atomic.AtomicBoolean
 import kotlin.coroutines.resume
 import kotlin.coroutines.resumeWithException
 import javax.inject.Inject
@@ -54,14 +56,19 @@ class CloudflareWebViewInterceptor @Inject constructor(
                             setAcceptCookie(true)
                         }
                         val webView = WebView(appContext)
+                        val mainHandler = Handler(Looper.getMainLooper())
+                        val cleanedUp = AtomicBoolean(false)
                         runCatching { cookieManager.setAcceptThirdPartyCookies(webView, true) }
 
                         fun cleanup() {
-                            webView.stopLoading()
-                            webView.loadUrl("about:blank")
-                            webView.clearHistory()
-                            webView.removeAllViews()
-                            webView.destroy()
+                            if (!cleanedUp.compareAndSet(false, true)) return
+                            mainHandler.post {
+                                runCatching { webView.stopLoading() }
+                                runCatching { webView.loadUrl("about:blank") }
+                                runCatching { webView.clearHistory() }
+                                runCatching { webView.removeAllViews() }
+                                runCatching { webView.destroy() }
+                            }
                         }
 
                         continuation.invokeOnCancellation { cleanup() }
