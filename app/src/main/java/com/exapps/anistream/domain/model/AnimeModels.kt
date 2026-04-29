@@ -174,6 +174,7 @@ data class UserPreferences(
     val preferSummary: Boolean = false,
     val cinemaMode: Boolean = false,
     val dynamicColors: Boolean = true,
+    val skipIntroSeconds: Int = 85,
 )
 
 enum class StreamType {

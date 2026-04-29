@@ -7,12 +7,15 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material3.AssistChip
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.Slider
 import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
@@ -24,6 +27,7 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.exapps.anistream.BuildConfig
 import com.exapps.anistream.R
+import com.exapps.anistream.presentation.components.GradientHeroCard
 
 @Composable
 @OptIn(ExperimentalMaterial3Api::class)
@@ -47,9 +51,16 @@ fun SettingsScreen(
             verticalArrangement = Arrangement.spacedBy(16.dp),
         ) {
             item {
-                Text(
-                    text = stringResource(id = R.string.settings_subtitle),
-                    style = MaterialTheme.typography.bodyLarge,
+                GradientHeroCard(
+                    title = stringResource(id = R.string.settings_hero_title),
+                    subtitle = stringResource(id = R.string.settings_subtitle),
+                )
+            }
+
+            item {
+                SkipIntroCard(
+                    seconds = state.preferences.skipIntroSeconds,
+                    onSecondsChange = viewModel::setSkipIntroSeconds,
                 )
             }
 
@@ -87,7 +98,7 @@ fun SettingsScreen(
             }
 
             item {
-                Card(colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface)) {
+                Card(colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.errorContainer.copy(alpha = 0.55f))) {
                     Column(
                         modifier = Modifier.padding(16.dp),
                         verticalArrangement = Arrangement.spacedBy(12.dp),
@@ -112,6 +123,7 @@ fun SettingsScreen(
                         modifier = Modifier.padding(16.dp),
                         verticalArrangement = Arrangement.spacedBy(12.dp),
                     ) {
+                        Text(stringResource(id = R.string.settings_danger_zone), style = MaterialTheme.typography.titleMedium)
                         Button(onClick = viewModel::clearHistory, modifier = Modifier.fillMaxWidth()) {
                             Text(stringResource(id = R.string.settings_clear_history))
                         }
@@ -132,7 +144,10 @@ private fun SettingToggleCard(
     checked: Boolean,
     onCheckedChange: (Boolean) -> Unit,
 ) {
-    Card(colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface)) {
+    Card(
+        shape = RoundedCornerShape(24.dp),
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
+    ) {
         Row(
             modifier = Modifier
                 .fillMaxWidth()
@@ -144,6 +159,43 @@ private fun SettingToggleCard(
                 Text(text = subtitle, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
             }
             Switch(checked = checked, onCheckedChange = onCheckedChange)
+        }
+    }
+}
+
+@Composable
+private fun SkipIntroCard(
+    seconds: Int,
+    onSecondsChange: (Int) -> Unit,
+) {
+    Card(
+        shape = RoundedCornerShape(24.dp),
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
+    ) {
+        Column(
+            modifier = Modifier.padding(16.dp),
+            verticalArrangement = Arrangement.spacedBy(12.dp),
+        ) {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+            ) {
+                Column(modifier = Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                    Text(text = stringResource(id = R.string.settings_skip_intro), style = MaterialTheme.typography.titleMedium)
+                    Text(
+                        text = stringResource(id = R.string.settings_skip_intro_desc),
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                }
+                AssistChip(onClick = {}, label = { Text(stringResource(id = R.string.settings_skip_intro_value, seconds)) })
+            }
+            Slider(
+                value = seconds.toFloat(),
+                onValueChange = { onSecondsChange(it.toInt()) },
+                valueRange = 0f..180f,
+                steps = 11,
+            )
         }
     }
 }

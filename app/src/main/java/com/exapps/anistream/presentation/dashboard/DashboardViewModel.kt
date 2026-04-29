@@ -105,6 +105,7 @@ class DashboardViewModel @Inject constructor(
                         catalog = (it.catalog + page.items).distinctBy(AnimeCard::slug),
                         catalogPage = page.currentPage,
                         hasMoreCatalog = page.hasNextPage,
+                        errorMessage = null,
                     )
                 }
             }.onFailure { error ->
@@ -150,6 +151,7 @@ class DashboardViewModel @Inject constructor(
                         isSearching = false,
                         searchPage = result.currentPage,
                         hasMoreSearchResults = result.hasNextPage,
+                        errorMessage = null,
                     )
                 }
             }.onFailure { error ->
@@ -182,6 +184,7 @@ class DashboardViewModel @Inject constructor(
                         searchResults = (it.searchResults + result.items).distinctBy(AnimeCard::slug),
                         searchPage = result.currentPage,
                         hasMoreSearchResults = result.hasNextPage,
+                        errorMessage = null,
                     )
                 }
             }.onFailure { error ->

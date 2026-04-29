@@ -155,6 +155,10 @@ class AnimeRepositoryImpl @Inject constructor(
         preferencesDataSource.setDynamicColors(enabled)
     }
 
+    override suspend fun setSkipIntroSeconds(seconds: Int) {
+        preferencesDataSource.setSkipIntroSeconds(seconds)
+    }
+
     private fun createEntity(
         details: AnimeDetails,
         existing: WatchlistAnimeEntity? = null,

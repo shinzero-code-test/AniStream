@@ -113,7 +113,13 @@ class PlayerViewModel @Inject constructor(
     private fun observePreferences() {
         viewModelScope.launch {
             observePreferencesUseCase().collect { preferences ->
-                _uiState.update { it.copy(autoPlayNext = preferences.autoPlayNext) }
+                _uiState.update {
+                    it.copy(
+                        autoPlayNext = preferences.autoPlayNext,
+                        cinemaMode = preferences.cinemaMode,
+                        skipIntroSeconds = preferences.skipIntroSeconds,
+                    )
+                }
             }
         }
     }
@@ -124,6 +130,7 @@ data class PlayerUiState(
     val isRecovering: Boolean = false,
     val stream: EpisodeStream? = null,
     val autoPlayNext: Boolean = true,
+    val cinemaMode: Boolean = false,
     val skipIntroSeconds: Int = 85,
     val errorMessage: String? = null,
 )

@@ -43,7 +43,9 @@ import com.exapps.anistream.domain.model.CatalogSort
 import com.exapps.anistream.domain.model.EpisodeCard
 import com.exapps.anistream.domain.model.PlaybackHistory
 import com.exapps.anistream.domain.model.SortDirection
+import com.exapps.anistream.presentation.components.EmptyStateCard
 import com.exapps.anistream.presentation.components.EpisodePosterCard
+import com.exapps.anistream.presentation.components.GradientHeroCard
 import com.exapps.anistream.presentation.components.SectionTitle
 import com.exapps.anistream.presentation.components.TitlePosterCard
 import com.exapps.anistream.presentation.components.TitleSummaryCard
@@ -92,6 +94,13 @@ fun DashboardScreen(
             contentPadding = PaddingValues(16.dp),
             verticalArrangement = Arrangement.spacedBy(20.dp),
         ) {
+            item {
+                GradientHeroCard(
+                    title = stringResource(id = R.string.home_hero_title),
+                    subtitle = stringResource(id = R.string.home_hero_subtitle),
+                )
+            }
+
             item {
                 OutlinedTextField(
                     value = state.searchQuery,
@@ -180,7 +189,10 @@ fun DashboardScreen(
 
                 if (!state.isSearching && state.searchResults.isEmpty()) {
                     item {
-                        Text(stringResource(id = R.string.search_empty))
+                        EmptyStateCard(
+                            title = stringResource(id = R.string.search_empty_title),
+                            message = stringResource(id = R.string.search_empty),
+                        )
                     }
                 }
 
@@ -203,6 +215,14 @@ fun DashboardScreen(
                     }
                 }
             } else {
+                item {
+                    QuickStatsCard(
+                        latestEpisodesCount = state.latestEpisodes.size,
+                        latestTitlesCount = state.latestTitles.size,
+                        catalogCount = state.catalog.size,
+                    )
+                }
+
                 if (state.continueWatching.isNotEmpty()) {
                     item {
                         SectionTitle(
@@ -309,6 +329,45 @@ private fun androidx.compose.foundation.lazy.LazyListScope.titleSection(
             items(items, key = { it.slug }) { item ->
                 TitlePosterCard(item = item, onClick = { onClick(it.slug) })
             }
+        }
+    }
+}
+
+@Composable
+@OptIn(ExperimentalLayoutApi::class)
+private fun QuickStatsCard(
+    latestEpisodesCount: Int,
+    latestTitlesCount: Int,
+    catalogCount: Int,
+) {
+    Card(
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.62f)),
+        shape = RoundedCornerShape(26.dp),
+    ) {
+        FlowRow(
+            modifier = Modifier.padding(16.dp),
+            horizontalArrangement = Arrangement.spacedBy(10.dp),
+            verticalArrangement = Arrangement.spacedBy(10.dp),
+        ) {
+            StatPill(label = stringResource(id = R.string.home_stat_latest_episodes), value = latestEpisodesCount.toString())
+            StatPill(label = stringResource(id = R.string.home_stat_latest_titles), value = latestTitlesCount.toString())
+            StatPill(label = stringResource(id = R.string.home_stat_catalog), value = catalogCount.toString())
+        }
+    }
+}
+
+@Composable
+private fun StatPill(label: String, value: String) {
+    Card(
+        shape = RoundedCornerShape(20.dp),
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
+    ) {
+        Column(
+            modifier = Modifier.padding(horizontal = 16.dp, vertical = 12.dp),
+            verticalArrangement = Arrangement.spacedBy(2.dp),
+        ) {
+            Text(text = value, style = MaterialTheme.typography.titleLarge, color = MaterialTheme.colorScheme.primary)
+            Text(text = label, style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
         }
     }
 }

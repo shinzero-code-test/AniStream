@@ -22,6 +22,8 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.rounded.ArrowBack
 import androidx.compose.material.icons.rounded.Bookmark
 import androidx.compose.material.icons.rounded.BookmarkBorder
+import androidx.compose.material.icons.rounded.PlayArrow
+import androidx.compose.material3.Button
 import androidx.compose.material3.AssistChip
 import androidx.compose.material3.AssistChipDefaults
 import androidx.compose.material3.Card
@@ -52,6 +54,7 @@ import coil.compose.AsyncImage
 import com.exapps.anistream.R
 import com.exapps.anistream.domain.model.AnimeDetails
 import com.exapps.anistream.domain.model.WatchStatus
+import com.exapps.anistream.presentation.components.EmptyStateCard
 import com.exapps.anistream.presentation.components.EpisodeRow
 import com.exapps.anistream.presentation.components.SectionTitle
 import com.exapps.anistream.presentation.components.TitlePosterCard
@@ -128,6 +131,19 @@ fun DetailsScreen(
                         HeaderCard(details = details)
                     }
 
+                    details.episodes.firstOrNull()?.let { firstEpisode ->
+                        item {
+                            Button(
+                                onClick = { onPlayEpisode(firstEpisode.titleSlug, firstEpisode.episodeNumber) },
+                                modifier = Modifier.fillMaxWidth(),
+                            ) {
+                                Icon(imageVector = Icons.Rounded.PlayArrow, contentDescription = null)
+                                Spacer(modifier = Modifier.size(8.dp))
+                                Text(stringResource(id = R.string.details_start_watching))
+                            }
+                        }
+                    }
+
                     item {
                         WatchStateCard(
                             details = details,
@@ -174,8 +190,17 @@ fun DetailsScreen(
                         )
                     }
 
-                    items(details.episodes, key = { it.episodeUrl }) { episode ->
-                        EpisodeRow(item = episode, onClick = { onPlayEpisode(it.titleSlug, it.episodeNumber) })
+                    if (details.episodes.isEmpty()) {
+                        item {
+                            EmptyStateCard(
+                                title = stringResource(id = R.string.details_episodes_empty_title),
+                                message = stringResource(id = R.string.details_episodes_empty),
+                            )
+                        }
+                    } else {
+                        items(details.episodes, key = { it.episodeUrl }) { episode ->
+                            EpisodeRow(item = episode, onClick = { onPlayEpisode(it.titleSlug, it.episodeNumber) })
+                        }
                     }
 
                     if (details.relatedTitles.isNotEmpty()) {

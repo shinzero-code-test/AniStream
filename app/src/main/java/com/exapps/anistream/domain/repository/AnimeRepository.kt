@@ -40,4 +40,5 @@ interface AnimeRepository {
     suspend fun setCinemaMode(enabled: Boolean)
     suspend fun setAutoPlayNext(enabled: Boolean)
     suspend fun setDynamicColors(enabled: Boolean)
+    suspend fun setSkipIntroSeconds(seconds: Int)
 }

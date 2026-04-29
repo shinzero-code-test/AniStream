@@ -48,6 +48,7 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.media3.common.MediaItem
 import androidx.media3.common.PlaybackException
 import androidx.media3.common.Player
+import androidx.media3.common.util.UnstableApi
 import androidx.media3.datasource.DefaultHttpDataSource
 import androidx.media3.exoplayer.ExoPlayer
 import androidx.media3.ui.AspectRatioFrameLayout
@@ -58,6 +59,7 @@ import com.exapps.anistream.data.download.AnimeDownloadService
 import com.exapps.anistream.domain.model.StreamType
 
 @Composable
+@UnstableApi
 @OptIn(ExperimentalLayoutApi::class, ExperimentalMaterial3Api::class)
 fun PlayerScreen(
     viewModel: PlayerViewModel,
@@ -106,6 +108,7 @@ fun PlayerScreen(
 
             else -> {
                 val stream = state.stream!!
+                val playerHeight = if (state.cinemaMode) 320.dp else 240.dp
                 val playableSources = stream.availableSources.filter {
                     it.type == StreamType.HLS || it.type == StreamType.MP4 || it.type == StreamType.MKV
                 }
@@ -184,7 +187,7 @@ fun PlayerScreen(
                                     AndroidView(
                                         modifier = Modifier
                                             .fillMaxWidth()
-                                            .height(240.dp),
+                                            .height(playerHeight),
                                         factory = { ctx ->
                                             PlayerView(ctx).apply {
                                                 layoutParams = android.view.ViewGroup.LayoutParams(MATCH_PARENT, MATCH_PARENT)
@@ -211,12 +214,24 @@ fun PlayerScreen(
                                 }
 
                                 if (stream.views != null) {
-                                    Text(
-                                        text = "${stream.views} ${stringResource(id = R.string.label_views)}",
-                                        style = MaterialTheme.typography.bodyMedium,
-                                        color = MaterialTheme.colorScheme.primary,
+                                    AssistChip(
+                                        onClick = {},
+                                        label = { Text("${stream.views} ${stringResource(id = R.string.label_views)}") },
                                     )
                                 }
+
+                                AssistChip(
+                                    onClick = {},
+                                    label = {
+                                        Text(
+                                            if (state.cinemaMode) {
+                                                stringResource(id = R.string.player_cinema_mode_on)
+                                            } else {
+                                                stringResource(id = R.string.player_cinema_mode_off)
+                                            },
+                                        )
+                                    },
+                                )
 
                                 if (stream.batchDownloadUrl != null) {
                                     AssistChip(

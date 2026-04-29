@@ -12,6 +12,7 @@ import androidx.core.content.ContextCompat
 import androidx.lifecycle.LifecycleService
 import androidx.media3.common.MediaItem
 import androidx.media3.common.MimeTypes
+import androidx.media3.common.util.UnstableApi
 import androidx.media3.transformer.Composition
 import androidx.media3.transformer.EditedMediaItem
 import androidx.media3.transformer.ExportException
@@ -34,6 +35,7 @@ import kotlin.coroutines.resume
 import kotlin.coroutines.resumeWithException
 
 @AndroidEntryPoint
+@UnstableApi
 class AnimeDownloadService : LifecycleService() {
 
     @Inject
@@ -53,6 +55,7 @@ class AnimeDownloadService : LifecycleService() {
     }
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
+        super.onStartCommand(intent, flags, startId)
         when (intent?.action) {
             ACTION_CANCEL -> {
                 activeTransformer?.cancel()

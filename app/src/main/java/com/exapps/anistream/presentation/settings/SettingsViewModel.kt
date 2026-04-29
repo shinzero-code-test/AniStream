@@ -10,6 +10,7 @@ import com.exapps.anistream.domain.usecase.SetAutoPlayNextUseCase
 import com.exapps.anistream.domain.usecase.SetCinemaModeUseCase
 import com.exapps.anistream.domain.usecase.SetDynamicColorsUseCase
 import com.exapps.anistream.domain.usecase.SetPreferSummaryUseCase
+import com.exapps.anistream.domain.usecase.SetSkipIntroSecondsUseCase
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -25,6 +26,7 @@ class SettingsViewModel @Inject constructor(
     private val setPreferSummaryUseCase: SetPreferSummaryUseCase,
     private val setCinemaModeUseCase: SetCinemaModeUseCase,
     private val setDynamicColorsUseCase: SetDynamicColorsUseCase,
+    private val setSkipIntroSecondsUseCase: SetSkipIntroSecondsUseCase,
     private val clearHistoryUseCase: ClearHistoryUseCase,
     private val clearWatchlistUseCase: ClearWatchlistUseCase,
 ) : ViewModel() {
@@ -54,6 +56,10 @@ class SettingsViewModel @Inject constructor(
 
     fun setDynamicColors(enabled: Boolean) {
         viewModelScope.launch { setDynamicColorsUseCase(enabled) }
+    }
+
+    fun setSkipIntroSeconds(seconds: Int) {
+        viewModelScope.launch { setSkipIntroSecondsUseCase(seconds) }
     }
 
     fun clearHistory() {

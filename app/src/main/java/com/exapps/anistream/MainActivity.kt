@@ -12,12 +12,14 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.LayoutDirection
 import androidx.compose.ui.platform.LocalLayoutDirection
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import androidx.media3.common.util.UnstableApi
 import com.exapps.anistream.presentation.navigation.AniStreamNavGraph
 import com.exapps.anistream.presentation.root.RootViewModel
 import com.exapps.anistream.ui.theme.AniStreamTheme
 import dagger.hilt.android.AndroidEntryPoint
 
 @AndroidEntryPoint
+@UnstableApi
 class MainActivity : ComponentActivity() {
 
     private val rootViewModel: RootViewModel by viewModels()

@@ -157,3 +157,9 @@ class SetDynamicColorsUseCase @Inject constructor(
 ) {
     suspend operator fun invoke(enabled: Boolean) = repository.setDynamicColors(enabled)
 }
+
+class SetSkipIntroSecondsUseCase @Inject constructor(
+    private val repository: AnimeRepository,
+) {
+    suspend operator fun invoke(seconds: Int) = repository.setSkipIntroSeconds(seconds)
+}

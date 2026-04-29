@@ -20,6 +20,7 @@ import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
+import androidx.media3.common.util.UnstableApi
 import com.exapps.anistream.R
 import com.exapps.anistream.presentation.dashboard.DashboardScreen
 import com.exapps.anistream.presentation.dashboard.DashboardViewModel
@@ -45,6 +46,7 @@ private data class RootDestination(
 )
 
 @Composable
+@UnstableApi
 fun AniStreamNavGraph() {
     val navController = rememberNavController()
     val backStackEntry by navController.currentBackStackEntryAsState()
