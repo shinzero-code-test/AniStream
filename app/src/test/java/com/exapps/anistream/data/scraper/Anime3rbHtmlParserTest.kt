@@ -67,6 +67,7 @@ class Anime3rbHtmlParserTest {
         assertNotNull(stream.livewireSnapshot)
         assertEquals("66137468a5d62", stream.selectedServerId)
         assertTrue(stream.playbackUrl.orEmpty().startsWith("https://video.vid3rb.com/player/"))
+        assertTrue(stream.playbackUrl.orEmpty().contains("cinema=760"))
         assertFalse(stream.downloadLinks.isEmpty())
         assertEquals(2, stream.nextEpisodeNumber)
     }
@@ -168,7 +169,7 @@ class Anime3rbHtmlParserTest {
                 <meta property="og:image" content="https://video.vid3rb.com/video/9bc16fc9-d7b3-4840-9921-7453d4c1f9f4">
             </head><body>
                 <div wire:snapshot="{&quot;data&quot;:{&quot;title_slug&quot;:&quot;jujutsu-kaisen&quot;,&quot;video_number&quot;:&quot;1&quot;,&quot;views&quot;:212288,&quot;video_url&quot;:&quot;https:\/\/video.vid3rb.com\/player\/9bc16f8b-35b6-4b91-90e2-5d477b093e58?token=e06dc9d3965141e827cb17c4e101e83ae29d4cab93216d7dd60a12d5da9f770f&amp;expires=1777250207&quot;,&quot;video_source&quot;:&quot;66137468a5d62&quot;},&quot;memo&quot;:{&quot;id&quot;:&quot;YypUorkGVBQeSUP13HeK&quot;},&quot;checksum&quot;:&quot;5458a460&quot;}" wire:id="YypUorkGVBQeSUP13HeK">
-                    <iframe title="Jujutsu Kaisen الحلقة 1" src="https://video.vid3rb.com/player/9bc16f8b-35b6-4b91-90e2-5d477b093e58?token=e06dc9d3965141e827cb17c4e101e83ae29d4cab93216d7dd60a12d5da9f770f&amp;expires=1777250207"></iframe>
+                    <iframe title="Jujutsu Kaisen الحلقة 1" src="https://video.vid3rb.com/player/9bc16f8b-35b6-4b91-90e2-5d477b093e58?token=e06dc9d3965141e827cb17c4e101e83ae29d4cab93216d7dd60a12d5da9f770f&amp;expires=1777250207&amp;cinema=760"></iframe>
                     <h1><a href="https://anime3rb.com/titles/jujutsu-kaisen">Jujutsu Kaisen الحلقة 1</a></h1>
                     <h2 class="inline text-lg font-light">ريومين سوكونا</h2>
                     <button data-video-source="66137468a5d62"><span title="ترجمة Crunchyroll">ترجمة Crunchyroll</span></button>

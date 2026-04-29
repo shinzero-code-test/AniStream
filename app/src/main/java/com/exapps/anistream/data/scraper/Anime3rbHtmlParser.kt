@@ -228,9 +228,10 @@ class Anime3rbHtmlParser @Inject constructor() {
         val directPlayerUrl = decodedSnapshot.livewireValue("video_url")
             ?: document.selectFirst("iframe")?.absUrl("src")
             ?: structuredVideos.firstNotNullOfOrNull { it.stringValue("embedUrl") }?.htmlDecoded()
+        val iframeUrl = document.selectFirst("iframe")?.absUrl("src")?.htmlDecoded()
+            ?: directPlayerUrl?.appendQueryParameterIfMissing("cinema", "760")
         val activeSourceId = decodedSnapshot.livewireValue("video_source")
         val csrfToken = document.selectFirst("meta[name=csrf-token]")?.attr("content")
-        val iframeUrl = document.selectFirst("iframe")?.absUrl("src") ?: directPlayerUrl
         val episodeTitle = document.selectFirst("h2.inline.text-lg.font-light")?.text()?.trim()
             ?: structuredVideos.firstNotNullOfOrNull { it.stringValue("description") }
                 ?.substringAfter(" بعنوان ", missingDelimiterValue = "")
@@ -257,7 +258,7 @@ class Anime3rbHtmlParser @Inject constructor() {
             VideoSource(
                 id = button.attr("data-video-source").ifBlank { "source-$index" },
                 label = label,
-                url = directPlayerUrl.orEmpty(),
+                url = (iframeUrl ?: directPlayerUrl).orEmpty(),
                 type = StreamType.PLAYER_PAGE,
                 serverId = button.attr("data-video-source").ifBlank { null },
             )
@@ -290,7 +291,7 @@ class Anime3rbHtmlParser @Inject constructor() {
             episodeTitle = episodeTitle,
             refererUrl = document.location(),
             iframeUrl = iframeUrl,
-            playbackUrl = directPlayerUrl,
+            playbackUrl = iframeUrl ?: directPlayerUrl,
             availableSources = when {
                 availableSources.isNotEmpty() -> availableSources
                 structuredSources.isNotEmpty() -> structuredSources
@@ -533,6 +534,12 @@ class Anime3rbHtmlParser @Inject constructor() {
 
     private fun Double.trimTrailingZero(): String {
         return if (this % 1.0 == 0.0) toInt().toString() else toString()
+    }
+
+    private fun String.appendQueryParameterIfMissing(name: String, value: String): String {
+        if (contains("$name=")) return this
+        val separator = if (contains("?")) "&" else "?"
+        return "$this$separator$name=$value"
     }
 
     private companion object {

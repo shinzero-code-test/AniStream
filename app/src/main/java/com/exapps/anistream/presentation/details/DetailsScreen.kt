@@ -53,6 +53,7 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import coil.compose.AsyncImage
 import com.exapps.anistream.R
 import com.exapps.anistream.domain.model.AnimeDetails
+import com.exapps.anistream.domain.model.TrailerItem
 import com.exapps.anistream.domain.model.WatchStatus
 import com.exapps.anistream.presentation.components.EmptyStateCard
 import com.exapps.anistream.presentation.components.EpisodeRow
@@ -67,6 +68,7 @@ fun DetailsScreen(
     onBack: () -> Unit,
     onPlayEpisode: (String, Int) -> Unit,
     onOpenDetails: (String) -> Unit,
+    onPlayTrailer: (TrailerItem) -> Unit,
 ) {
     val state by viewModel.uiState.collectAsStateWithLifecycle()
     val uriHandler = LocalUriHandler.current
@@ -175,7 +177,7 @@ fun DetailsScreen(
                             FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
                                 details.trailers.forEach { trailer ->
                                     AssistChip(
-                                        onClick = { uriHandler.openUri(trailer.embedUrl) },
+                                        onClick = { onPlayTrailer(trailer) },
                                         label = { Text(trailer.title) },
                                     )
                                 }

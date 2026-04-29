@@ -122,12 +122,7 @@ fun PlayerScreen(
                     ?: stream.iframeUrl
                     ?: stream.playbackUrl?.takeUnless { it.contains(".m3u8") || it.contains(".mp4") || it.contains(".mkv") }
                 var selectedUrl by rememberSaveable(stream.titleSlug, stream.episodeNumber, stream.playbackUrl, stream.selectedServerId) {
-                    mutableStateOf(
-                        playableSources.firstOrNull()?.url
-                            ?: stream.playbackUrl?.takeIf {
-                                it.contains(".m3u8") || it.contains(".mp4") || it.contains(".mkv")
-                            },
-                    )
+                    mutableStateOf<String?>(null)
                 }
 
                 val context = LocalContext.current

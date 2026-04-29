@@ -20,6 +20,7 @@ import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
+import androidx.navigation.toRoute
 import androidx.media3.common.util.UnstableApi
 import com.exapps.anistream.R
 import com.exapps.anistream.presentation.catalog.CatalogScreen
@@ -35,6 +36,7 @@ import com.exapps.anistream.presentation.player.PlayerScreen
 import com.exapps.anistream.presentation.player.PlayerViewModel
 import com.exapps.anistream.presentation.settings.SettingsScreen
 import com.exapps.anistream.presentation.settings.SettingsViewModel
+import com.exapps.anistream.presentation.trailer.TrailerScreen
 
 private enum class RootNavTarget {
     HOME,
@@ -185,6 +187,9 @@ fun AniStreamNavGraph(
                             )
                         },
                         onOpenDetails = { slug -> navController.navigate(DetailsRoute(slug = slug)) },
+                        onPlayTrailer = { trailer ->
+                            navController.navigate(TrailerRoute(title = trailer.title, embedUrl = trailer.embedUrl))
+                        },
                     )
                 }
 
@@ -198,6 +203,15 @@ fun AniStreamNavGraph(
                                 PlayerRoute(titleSlug = titleSlug, episodeNumber = episodeNumber),
                             )
                         },
+                    )
+                }
+
+                composable<TrailerRoute> { backStackEntry ->
+                    val route = backStackEntry.toRoute<TrailerRoute>()
+                    TrailerScreen(
+                        title = route.title,
+                        embedUrl = route.embedUrl,
+                        onBack = navController::popBackStack,
                     )
                 }
             }

@@ -1,6 +1,9 @@
 package com.exapps.anistream.data.scraper
 
 import com.exapps.anistream.core.common.DispatcherProvider
+import com.exapps.anistream.core.network.CloudflareChallengeDetector
+import com.exapps.anistream.core.webview.Anime3rbSessionBridge
+import com.exapps.anistream.core.webview.VisibleCloudflareChallengeSolver
 import com.exapps.anistream.domain.model.AnimeDetails
 import com.exapps.anistream.domain.model.CatalogCategory
 import com.exapps.anistream.domain.model.CatalogFilters
@@ -16,6 +19,7 @@ import okhttp3.OkHttpClient
 import okhttp3.Request
 import org.jsoup.Jsoup
 import org.jsoup.nodes.Document
+import java.net.URLEncoder
 import javax.inject.Inject
 import javax.inject.Singleton
 
@@ -25,6 +29,8 @@ class Anime3rbExtractor @Inject constructor(
     private val parser: Anime3rbHtmlParser,
     private val videoStreamResolver: VideoStreamResolver,
     private val autoFailoverPlaybackResolver: AutoFailoverPlaybackResolver,
+    private val sessionBridge: Anime3rbSessionBridge,
+    private val challengeSolver: VisibleCloudflareChallengeSolver,
     private val dispatchers: DispatcherProvider,
 ) : AnimeExtractor {
 
@@ -49,13 +55,14 @@ class Anime3rbExtractor @Inject constructor(
     }
 
     override suspend fun search(query: String, page: Int, filters: CatalogFilters): PaginatedTitles {
-        val url = BASE_URL.toHttpUrl().newBuilder()
-            .addPathSegment("search")
-            .addQueryParameter("q", query)
-            .addQueryParameter("deep", "1")
-            .addCatalogFilters(page, filters, includeDefaultSort = false)
-            .build()
-        return parser.parseSearch(fetchDocument(url.toString()), page)
+        val encodedQuery = URLEncoder.encode(query.trim(), Charsets.UTF_8.name())
+        val url = buildString {
+            append(BASE_URL)
+            append("/search?q=")
+            append(encodedQuery)
+            if (page > 1) append("&page=").append(page)
+        }
+        return parser.parseSearch(fetchDocument(url), page)
     }
 
     override suspend fun getAnimeDetails(slug: String): AnimeDetails {
@@ -105,7 +112,7 @@ class Anime3rbExtractor @Inject constructor(
             ?: mergedSources.firstOrNull { it.type == StreamType.MKV }?.url
 
         return parsed.copy(
-            playbackUrl = preferredPlayback ?: playbackAttempt.playbackUrl ?: parsed.playbackUrl,
+            playbackUrl = preferredPlayback ?: parsed.iframeUrl ?: playbackAttempt.playbackUrl ?: parsed.playbackUrl,
             availableSources = mergedSources,
             selectedServerId = playbackAttempt.selectedServerId ?: parsed.selectedServerId,
             attemptedServerIds = playbackAttempt.attemptedServerIds,
@@ -114,9 +121,19 @@ class Anime3rbExtractor @Inject constructor(
 
     private suspend fun fetchDocument(url: String): Document {
         return withContext(dispatchers.io) {
+            sessionBridge.syncFromWebView()
             val request = Request.Builder().url(url).get().build()
             client.newCall(request).execute().use { response ->
-                check(response.isSuccessful) { "Request failed: ${response.code} ${response.message}" }
+                if (response.code == 403 || CloudflareChallengeDetector.isChallenge(response)) {
+                    challengeSolver.markChallengeRequired()
+                }
+                check(response.isSuccessful) {
+                    if (response.code == 403) {
+                        "Anime3rb Cloudflare session expired. Complete the verification screen, then retry."
+                    } else {
+                        "Request failed: ${response.code} ${response.message}"
+                    }
+                }
                 Jsoup.parse(response.body?.string().orEmpty(), response.request.url.toString())
             }
         }

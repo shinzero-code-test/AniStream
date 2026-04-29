@@ -22,3 +22,9 @@ data class PlayerRoute(
     val titleSlug: String,
     val episodeNumber: Int,
 )
+
+@Serializable
+data class TrailerRoute(
+    val title: String,
+    val embedUrl: String,
+)

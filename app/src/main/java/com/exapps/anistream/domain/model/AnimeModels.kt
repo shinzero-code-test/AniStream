@@ -147,6 +147,12 @@ data class TrailerItem(
 )
 
 @Immutable
+data class TrailerRouteArgs(
+    val title: String,
+    val embedUrl: String,
+)
+
+@Immutable
 data class EpisodeStream(
     val titleSlug: String,
     val animeTitle: String,
