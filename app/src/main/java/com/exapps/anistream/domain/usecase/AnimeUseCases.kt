@@ -47,8 +47,18 @@ class GetAnimeDetailsUseCase @Inject constructor(
 class GetEpisodeStreamUseCase @Inject constructor(
     private val repository: AnimeRepository,
 ) {
-    suspend operator fun invoke(titleSlug: String, episodeNumber: Int): EpisodeStream {
-        return repository.getEpisodeStream(titleSlug, episodeNumber)
+    suspend operator fun invoke(
+        titleSlug: String,
+        episodeNumber: Int,
+        preferredServerId: String? = null,
+        excludedServerIds: Set<String> = emptySet(),
+    ): EpisodeStream {
+        return repository.getEpisodeStream(
+            titleSlug = titleSlug,
+            episodeNumber = episodeNumber,
+            preferredServerId = preferredServerId,
+            excludedServerIds = excludedServerIds,
+        )
     }
 }
 

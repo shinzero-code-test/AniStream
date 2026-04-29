@@ -23,6 +23,7 @@ class Anime3rbExtractor @Inject constructor(
     private val client: OkHttpClient,
     private val parser: Anime3rbHtmlParser,
     private val videoStreamResolver: VideoStreamResolver,
+    private val autoFailoverPlaybackResolver: AutoFailoverPlaybackResolver,
     private val cloudflareChallengeSolver: CloudflareChallengeSolver,
     private val dispatchers: DispatcherProvider,
 ) : AnimeExtractor {
@@ -36,6 +37,11 @@ class Anime3rbExtractor @Inject constructor(
             .addPathSegments("titles/list")
             .addQueryParameter("sort_by", filters.sort.wireValue)
             .addQueryParameter("sort_dir", filters.direction.wireValue)
+            .apply { filters.season?.let { addQueryParameter("season", it) } }
+            .apply { filters.year?.let { addQueryParameter("year", it.toString()) } }
+            .apply { filters.genreSlug?.let { addQueryParameter("genres", it) } }
+            .apply { filters.status?.let { addQueryParameter("status", it) } }
+            .apply { filters.ageRating?.let { addQueryParameter("age", it) } }
             .apply { if (page > 1) addQueryParameter("page", page.toString()) }
             .build()
         return parser.parseCatalog(fetchDocument(url.toString()), page)
@@ -47,6 +53,11 @@ class Anime3rbExtractor @Inject constructor(
             .addQueryParameter("q", query)
             .addQueryParameter("sort_by", filters.sort.wireValue)
             .addQueryParameter("sort_dir", filters.direction.wireValue)
+            .apply { filters.season?.let { addQueryParameter("season", it) } }
+            .apply { filters.year?.let { addQueryParameter("year", it.toString()) } }
+            .apply { filters.genreSlug?.let { addQueryParameter("genres", it) } }
+            .apply { filters.status?.let { addQueryParameter("status", it) } }
+            .apply { filters.ageRating?.let { addQueryParameter("age", it) } }
             .apply { if (page > 1) addQueryParameter("page", page.toString()) }
             .build()
         return parser.parseSearch(fetchDocument(url.toString()), page)
@@ -56,15 +67,27 @@ class Anime3rbExtractor @Inject constructor(
         return parser.parseDetails(fetchDocument("$BASE_URL/titles/$slug"), slug)
     }
 
-    override suspend fun getEpisodeStream(titleSlug: String, episodeNumber: Int): EpisodeStream {
+    override suspend fun getEpisodeStream(
+        titleSlug: String,
+        episodeNumber: Int,
+        preferredServerId: String?,
+        excludedServerIds: Set<String>,
+    ): EpisodeStream {
         val episodeUrl = "$BASE_URL/episode/$titleSlug/$episodeNumber"
         val parsed = parser.parseEpisodePage(fetchDocument(episodeUrl), titleSlug, episodeNumber)
-        val candidateUrl = parsed.playbackUrl ?: parsed.iframeUrl
+        val playbackAttempt = autoFailoverPlaybackResolver.resolve(
+            stream = parsed,
+            preferredServerId = preferredServerId,
+            excludedServerIds = excludedServerIds,
+        )
 
-        val resolvedSources = if (!candidateUrl.isNullOrBlank()) {
-            videoStreamResolver.resolve(candidateUrl, episodeUrl)
-        } else {
-            emptyList()
+        val resolvedSources = playbackAttempt.playableSources.ifEmpty {
+            val fallbackUrl = parsed.playbackUrl ?: parsed.iframeUrl
+            if (fallbackUrl.isNullOrBlank()) {
+                emptyList()
+            } else {
+                videoStreamResolver.resolve(fallbackUrl, episodeUrl)
+            }
         }
 
         val mergedSources = buildList {
@@ -84,10 +107,13 @@ class Anime3rbExtractor @Inject constructor(
 
         val preferredPlayback = mergedSources.firstOrNull { it.type == StreamType.HLS }?.url
             ?: mergedSources.firstOrNull { it.type == StreamType.MP4 }?.url
+            ?: mergedSources.firstOrNull { it.type == StreamType.MKV }?.url
 
         return parsed.copy(
-            playbackUrl = preferredPlayback ?: parsed.playbackUrl,
+            playbackUrl = preferredPlayback ?: playbackAttempt.playbackUrl ?: parsed.playbackUrl,
             availableSources = mergedSources,
+            selectedServerId = playbackAttempt.selectedServerId ?: parsed.selectedServerId,
+            attemptedServerIds = playbackAttempt.attemptedServerIds,
         )
     }
 

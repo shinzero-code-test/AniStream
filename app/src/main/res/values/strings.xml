@@ -96,13 +96,23 @@
     <string name="player_empty">لا يوجد مصدر تشغيل متاح حالياً.</string>
     <string name="player_sources_title">مصادر المشاهدة</string>
     <string name="player_downloads_title">روابط التحميل</string>
+    <string name="player_download_offline">تنزيل أوفلاين</string>
     <string name="player_open_download_pack">تحميل جميع الحلقات</string>
     <string name="player_next_episode">تشغيل الحلقة التالية</string>
     <string name="player_episode_header">%1$s - الحلقة %2$d</string>
     <string name="player_source_hls">بث HLS</string>
     <string name="player_source_mp4">ملف MP4</string>
+    <string name="player_source_mkv">ملف MKV</string>
     <string name="player_source_download">تحميل</string>
     <string name="player_source_embedded">مشغل مضمّن</string>
+    <string name="player_skip_intro">تخطي المقدمة %1$dث</string>
+    <string name="player_recovering_stream">جارٍ إعادة استخراج الرابط وتجربة مصدر بديل…</string>
+
+    <string name="download_channel_name">تنزيلات AniStream</string>
+    <string name="download_in_progress">جارٍ تنزيل الحلقة وتحويلها للاستخدام دون اتصال…</string>
+    <string name="download_complete">اكتمل التنزيل بنجاح.</string>
+    <string name="download_failed">فشل التنزيل أو التحويل.</string>
+    <string name="download_no_source">لم يتم العثور على مصدر صالح للتنزيل.</string>
 
     <string name="watch_status_watching">أشاهده حالياً</string>
     <string name="watch_status_completed">أنهيت مشاهدته</string>

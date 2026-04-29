@@ -51,6 +51,17 @@ class VideoStreamResolver @Inject constructor(
                     )
                 }
 
+                if (finalUrl.endsWith(".mkv") || contentType.contains("matroska", ignoreCase = true)) {
+                    return@withContext listOf(
+                        VideoSource(
+                            id = "resolved-mkv",
+                            label = "MKV",
+                            url = finalUrl,
+                            type = StreamType.MKV,
+                        ),
+                    )
+                }
+
                 val body = response.body?.string().orEmpty()
                 val found = linkedMapOf<String, VideoSource>()
 
@@ -59,6 +70,7 @@ class VideoStreamResolver @Inject constructor(
                     val type = when {
                         normalized.contains(".m3u8") -> StreamType.HLS
                         normalized.contains(".mp4") -> StreamType.MP4
+                        normalized.contains(".mkv") -> StreamType.MKV
                         else -> StreamType.PLAYER_PAGE
                     }
                     found.putIfAbsent(
@@ -68,6 +80,7 @@ class VideoStreamResolver @Inject constructor(
                             label = when (type) {
                                 StreamType.HLS -> "HLS"
                                 StreamType.MP4 -> "MP4"
+                                StreamType.MKV -> "MKV"
                                 StreamType.DOWNLOAD -> "Download"
                                 StreamType.PLAYER_PAGE -> "Embedded player"
                             },

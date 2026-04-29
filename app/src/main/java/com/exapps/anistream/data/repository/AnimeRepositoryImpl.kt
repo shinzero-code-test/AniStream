@@ -40,8 +40,18 @@ class AnimeRepositoryImpl @Inject constructor(
 
     override suspend fun getAnimeDetails(slug: String): AnimeDetails = extractor.getAnimeDetails(slug)
 
-    override suspend fun getEpisodeStream(titleSlug: String, episodeNumber: Int): EpisodeStream {
-        return extractor.getEpisodeStream(titleSlug, episodeNumber)
+    override suspend fun getEpisodeStream(
+        titleSlug: String,
+        episodeNumber: Int,
+        preferredServerId: String?,
+        excludedServerIds: Set<String>,
+    ): EpisodeStream {
+        return extractor.getEpisodeStream(
+            titleSlug = titleSlug,
+            episodeNumber = episodeNumber,
+            preferredServerId = preferredServerId,
+            excludedServerIds = excludedServerIds,
+        )
     }
 
     override fun observeWatchlist(): Flow<List<WatchlistAnime>> {

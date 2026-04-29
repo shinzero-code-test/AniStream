@@ -11,5 +11,10 @@ interface AnimeExtractor {
     suspend fun getCatalog(page: Int = 1, filters: CatalogFilters = CatalogFilters()): PaginatedTitles
     suspend fun search(query: String, page: Int = 1, filters: CatalogFilters = CatalogFilters()): PaginatedTitles
     suspend fun getAnimeDetails(slug: String): AnimeDetails
-    suspend fun getEpisodeStream(titleSlug: String, episodeNumber: Int): EpisodeStream
+    suspend fun getEpisodeStream(
+        titleSlug: String,
+        episodeNumber: Int,
+        preferredServerId: String? = null,
+        excludedServerIds: Set<String> = emptySet(),
+    ): EpisodeStream
 }

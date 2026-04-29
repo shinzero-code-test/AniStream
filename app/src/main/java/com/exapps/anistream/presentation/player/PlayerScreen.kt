@@ -46,6 +46,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.viewinterop.AndroidView
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.media3.common.MediaItem
+import androidx.media3.common.PlaybackException
 import androidx.media3.common.Player
 import androidx.media3.datasource.DefaultHttpDataSource
 import androidx.media3.exoplayer.ExoPlayer
@@ -53,6 +54,7 @@ import androidx.media3.ui.AspectRatioFrameLayout
 import androidx.media3.ui.PlayerView
 import com.exapps.anistream.R
 import com.exapps.anistream.core.network.BrowserHeaders
+import com.exapps.anistream.data.download.AnimeDownloadService
 import com.exapps.anistream.domain.model.StreamType
 
 @Composable
@@ -65,6 +67,7 @@ fun PlayerScreen(
     val state by viewModel.uiState.collectAsStateWithLifecycle()
     val uriHandler = LocalUriHandler.current
     val latestOpenEpisode by rememberUpdatedState(newValue = onOpenEpisode)
+    val latestHandlePlaybackError by rememberUpdatedState(newValue = viewModel::handlePlaybackError)
 
     Scaffold(
         topBar = {
@@ -103,11 +106,15 @@ fun PlayerScreen(
 
             else -> {
                 val stream = state.stream!!
-                val playableSources = stream.availableSources.filter { it.type == StreamType.HLS || it.type == StreamType.MP4 }
-                var selectedUrl by rememberSaveable(stream.titleSlug, stream.episodeNumber) {
+                val playableSources = stream.availableSources.filter {
+                    it.type == StreamType.HLS || it.type == StreamType.MP4 || it.type == StreamType.MKV
+                }
+                var selectedUrl by rememberSaveable(stream.titleSlug, stream.episodeNumber, stream.playbackUrl, stream.selectedServerId) {
                     mutableStateOf(
                         playableSources.firstOrNull()?.url
-                            ?: stream.playbackUrl?.takeIf { it.contains(".m3u8") || it.contains(".mp4") },
+                            ?: stream.playbackUrl?.takeIf {
+                                it.contains(".m3u8") || it.contains(".mp4") || it.contains(".mkv")
+                            },
                     )
                 }
 
@@ -146,6 +153,10 @@ fun PlayerScreen(
                             ) {
                                 latestOpenEpisode(stream.titleSlug, stream.nextEpisodeNumber)
                             }
+                        }
+
+                        override fun onPlayerError(error: PlaybackException) {
+                            latestHandlePlaybackError()
                         }
                     }
                     exoPlayer.addListener(listener)
@@ -214,10 +225,43 @@ fun PlayerScreen(
                                     )
                                 }
 
+                                AssistChip(
+                                    onClick = {
+                                        AnimeDownloadService.start(
+                                            context,
+                                            AnimeDownloadService.DownloadRequest(
+                                                titleSlug = stream.titleSlug,
+                                                episodeNumber = stream.episodeNumber,
+                                                displayTitle = stream.animeTitle,
+                                                preferredServerId = stream.selectedServerId,
+                                            ),
+                                        )
+                                    },
+                                    label = { Text(stringResource(id = R.string.player_download_offline)) },
+                                )
+
+                                AssistChip(
+                                    onClick = {
+                                        exoPlayer.seekTo(
+                                            (exoPlayer.currentPosition + state.skipIntroSeconds * 1000L)
+                                                .coerceAtMost(exoPlayer.duration.takeIf { it > 0 } ?: Long.MAX_VALUE),
+                                        )
+                                    },
+                                    label = { Text(stringResource(id = R.string.player_skip_intro, state.skipIntroSeconds)) },
+                                )
+
                                 if (stream.nextEpisodeNumber != null) {
                                     AssistChip(
                                         onClick = { latestOpenEpisode(stream.titleSlug, stream.nextEpisodeNumber) },
                                         label = { Text(stringResource(id = R.string.player_next_episode)) },
+                                    )
+                                }
+
+                                if (state.isRecovering) {
+                                    Text(
+                                        text = stringResource(id = R.string.player_recovering_stream),
+                                        style = MaterialTheme.typography.bodyMedium,
+                                        color = MaterialTheme.colorScheme.primary,
                                     )
                                 }
                             }

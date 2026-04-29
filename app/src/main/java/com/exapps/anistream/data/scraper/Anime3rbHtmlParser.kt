@@ -161,6 +161,9 @@ class Anime3rbHtmlParser @Inject constructor() {
     }
 
     fun parseEpisodePage(document: Document, titleSlug: String, episodeNumber: Int): EpisodeStream {
+        val playerComponent = document.allElements.firstOrNull { element ->
+            element.hasAttr("wire:snapshot") && element.attr("wire:snapshot").contains("video_url")
+        }
         val titleLink = document.selectFirst("h1 a[href*=/titles/]")
         val animeTitle = titleLink
             ?.text()
@@ -171,13 +174,12 @@ class Anime3rbHtmlParser @Inject constructor() {
             ?: document.selectFirst("meta[property=og:image]")?.attr("content")
             ?: ""
 
-        val snapshot = document.allElements.firstOrNull { element ->
-            element.hasAttr("wire:snapshot") && element.attr("wire:snapshot").contains("video_url")
-        }?.attr("wire:snapshot").orEmpty()
+        val snapshot = playerComponent?.attr("wire:snapshot").orEmpty()
 
         val decodedSnapshot = Parser.unescapeEntities(snapshot, false)
         val directPlayerUrl = decodedSnapshot.livewireValue("video_url") ?: document.selectFirst("iframe")?.absUrl("src")
         val activeSourceId = decodedSnapshot.livewireValue("video_source")
+        val csrfToken = document.selectFirst("meta[name=csrf-token]")?.attr("content")
         val iframeUrl = document.selectFirst("iframe")?.absUrl("src")
         val episodeTitle = document.selectFirst("h2.inline.text-lg.font-light")?.text()?.trim()
         val views = decodedSnapshot.livewireValue("views")?.toLongOrNull()
@@ -198,6 +200,7 @@ class Anime3rbHtmlParser @Inject constructor() {
                 label = label,
                 url = directPlayerUrl.orEmpty(),
                 type = StreamType.PLAYER_PAGE,
+                serverId = button.attr("data-video-source").ifBlank { null },
             )
         }
 
@@ -237,6 +240,10 @@ class Anime3rbHtmlParser @Inject constructor() {
             views = views,
             nextEpisodeNumber = nextEpisodeNumber,
             batchDownloadUrl = batchDownloadUrl,
+            csrfToken = csrfToken,
+            livewireComponentId = playerComponent?.attr("wire:id"),
+            livewireSnapshot = decodedSnapshot.ifBlank { null },
+            selectedServerId = activeSourceId,
         )
     }
 

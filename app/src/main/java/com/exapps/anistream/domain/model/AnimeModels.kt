@@ -20,6 +20,11 @@ data class PaginatedTitles(
 data class CatalogFilters(
     val sort: CatalogSort = CatalogSort.ADDITION_DATE,
     val direction: SortDirection = SortDirection.DESC,
+    val season: String? = null,
+    val year: Int? = null,
+    val genreSlug: String? = null,
+    val status: String? = null,
+    val ageRating: String? = null,
 )
 
 enum class CatalogSort(val wireValue: String) {
@@ -97,6 +102,7 @@ data class VideoSource(
     val label: String,
     val url: String,
     val type: StreamType,
+    val serverId: String? = null,
 )
 
 @Immutable
@@ -132,6 +138,11 @@ data class EpisodeStream(
     val views: Long? = null,
     val nextEpisodeNumber: Int? = null,
     val batchDownloadUrl: String? = null,
+    val csrfToken: String? = null,
+    val livewireComponentId: String? = null,
+    val livewireSnapshot: String? = null,
+    val selectedServerId: String? = null,
+    val attemptedServerIds: List<String> = emptyList(),
 )
 
 @Immutable
@@ -168,6 +179,7 @@ data class UserPreferences(
 enum class StreamType {
     HLS,
     MP4,
+    MKV,
     DOWNLOAD,
     PLAYER_PAGE,
 }
