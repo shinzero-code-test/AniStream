@@ -122,7 +122,7 @@ dependencies {
     implementation("androidx.media3:media3-session:1.4.1")
     implementation("androidx.media3:media3-transformer:1.4.1")
 
-    implementation("com.arthenica:ffmpeg-kit-min:6.0-2")
+    implementation("com.arthenica:ffmpeg-kit-min:6.0-2.LTS")
 
     implementation("io.coil-kt:coil-compose:2.7.0")
 
