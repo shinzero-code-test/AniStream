@@ -18,7 +18,7 @@ import com.exapps.anistream.data.scraper.Anime3rbExtractor
 import com.exapps.anistream.data.scraper.AnimeExtractor
 import com.exapps.anistream.domain.repository.AnimeRepository
 import com.exapps.anistream.core.webview.CloudflareChallengeSolver
-import com.exapps.anistream.core.webview.CloudflareWebViewInterceptor
+import com.exapps.anistream.core.webview.VisibleCloudflareChallengeSolver
 import dagger.Binds
 import dagger.Module
 import dagger.Provides
@@ -39,7 +39,7 @@ abstract class AppBindingsModule {
 
     @Binds
     @Singleton
-    abstract fun bindCloudflareSolver(impl: CloudflareWebViewInterceptor): CloudflareChallengeSolver
+    abstract fun bindCloudflareSolver(impl: VisibleCloudflareChallengeSolver): CloudflareChallengeSolver
 
     @Binds
     @Singleton

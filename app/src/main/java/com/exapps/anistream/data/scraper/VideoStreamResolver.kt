@@ -2,6 +2,7 @@ package com.exapps.anistream.data.scraper
 
 import android.util.Base64
 import com.exapps.anistream.core.common.DispatcherProvider
+import com.exapps.anistream.core.network.BrowserHeaders
 import com.exapps.anistream.domain.model.StreamType
 import com.exapps.anistream.domain.model.VideoSource
 import com.squareup.duktape.Duktape
@@ -23,9 +24,12 @@ class VideoStreamResolver @Inject constructor(
             val request = Request.Builder()
                 .url(playerUrl)
                 .header("Referer", refererUrl)
+                .header("Origin", "https://anime3rb.com")
+                .header("User-Agent", BrowserHeaders.FALLBACK_USER_AGENT)
                 .build()
 
             client.newCall(request).execute().use { response ->
+                check(response.isSuccessful) { "Player request failed: ${response.code} ${response.message}" }
                 val finalUrl = response.request.url.toString()
                 val contentType = response.header("Content-Type").orEmpty()
 

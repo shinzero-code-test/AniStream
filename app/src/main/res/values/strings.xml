@@ -12,13 +12,26 @@
     <string name="action_clear">مسح</string>
     <string name="action_done">تم</string>
 
+    <string name="cloudflare_title">تجهيز جلسة Anime3rb</string>
+    <string name="cloudflare_message">تظهر صفحة الموقع أولاً لتجاوز حماية Cloudflare وحفظ الكوكيز على الجهاز، ثم يبدأ الجلب المباشر.</string>
+    <string name="cloudflare_loading">جارٍ تحميل Anime3rb…</string>
+    <string name="cloudflare_waiting">بانتظار انتهاء حماية Cloudflare…</string>
+    <string name="cloudflare_ready">تم تحميل الصفحة. جاري حفظ الجلسة…</string>
+    <string name="cloudflare_error">تعذر تحميل صفحة Anime3rb.</string>
+
     <string name="home_search_label">ابحث في Anime3rb</string>
     <string name="home_search_supporting">يتم جلب البيانات مباشرة من Anime3rb.com باستخدام محددات تم التحقق منها محلياً.</string>
+    <string name="home_hero_title">كل عالم الأنمي في مكان واحد</string>
+    <string name="home_hero_subtitle">واجهة جديدة تركّز على الاستكمال السريع، أحدث الحلقات، والبحث المباشر من Anime3rb.</string>
     <string name="home_loading">جارٍ تحميل الصفحة الرئيسية والفهرس…</string>
     <string name="home_error">تعذر تحميل البيانات حالياً.</string>
     <string name="search_results_title">نتائج البحث</string>
     <string name="search_loading_title">جارٍ البحث…</string>
+    <string name="search_empty_title">لا توجد نتائج</string>
     <string name="search_empty">لا توجد نتائج مطابقة حالياً.</string>
+    <string name="home_stat_latest_episodes">حلقات جديدة</string>
+    <string name="home_stat_latest_titles">أعمال مضافة</string>
+    <string name="home_stat_catalog">من الفهرس</string>
     <string name="section_continue_watching_title">أكمل المشاهدة</string>
     <string name="section_continue_watching_subtitle">استكمال آخر الحلقات التي بدأت مشاهدتها.</string>
     <string name="section_featured_title">الأنميات المثبتة</string>
@@ -29,6 +42,9 @@
     <string name="section_latest_titles_subtitle">قائمة الأعمال الجديدة مباشرة من Anime3rb.</string>
     <string name="section_catalog_title">فهرس الأنمي</string>
     <string name="section_catalog_subtitle">يدعم الترتيب والتحميل التدريجي من الموقع.</string>
+    <string name="catalog_categories_title">قوائم Anime3rb</string>
+    <string name="catalog_categories_subtitle">افتح قوائم الأنمي، الأفلام، OVA، ONA، الحلقات الخاصة والمزيد.</string>
+    <string name="catalog_screen_subtitle">قائمة مباشرة من Anime3rb حسب النوع المحدد.</string>
     <string name="catalog_sort_label">ترتيب الفهرس</string>
     <string name="catalog_sort_addition_date">تاريخ الإضافة</string>
     <string name="catalog_sort_name">الاسم</string>
@@ -39,14 +55,22 @@
     <string name="search_load_more">تحميل المزيد من النتائج</string>
 
     <string name="library_title">المكتبة</string>
+    <string name="library_hero_title">مكتبتك الشخصية</string>
+    <string name="library_hero_subtitle">تابع قائمتك، سجل المشاهدة، والأعمال المكتملة من مساحة واحدة.</string>
     <string name="library_watchlist_tab">قائمتي</string>
     <string name="library_history_tab">السجل</string>
+    <string name="library_watchlist_empty_title">القائمة فارغة</string>
     <string name="library_watchlist_empty">لم تضف أي عمل إلى قائمتك بعد.</string>
+    <string name="library_history_empty_title">لا يوجد سجل مشاهدة</string>
     <string name="library_history_empty">لا توجد حلقات في السجل بعد.</string>
     <string name="library_watch_status_filter">تصفية الحالة</string>
+    <string name="library_stat_watchlist">في القائمة</string>
+    <string name="library_stat_history">في السجل</string>
+    <string name="library_stat_completed">مكتمل</string>
     <string name="history_position">آخر موضع: %1$s</string>
 
     <string name="settings_title">الإعدادات</string>
+    <string name="settings_hero_title">تحكم بتجربة AniStream</string>
     <string name="settings_subtitle">تخصيص تجربة المشاهدة والتخزين المحلي.</string>
     <string name="settings_auto_play_next">التشغيل التلقائي للحلقة التالية</string>
     <string name="settings_auto_play_next_desc">ينتقل المشغل إلى الحلقة التالية تلقائياً عند انتهاء الحلقة الحالية.</string>
@@ -58,6 +82,10 @@
     <string name="settings_dynamic_colors_desc">استخدام ألوان Material You عندما تكون متاحة على الجهاز.</string>
     <string name="settings_clear_history">مسح السجل</string>
     <string name="settings_clear_watchlist">مسح القائمة</string>
+    <string name="settings_skip_intro">مدة تخطي المقدمة</string>
+    <string name="settings_skip_intro_desc">تستخدم في زر التخطي داخل المشغل ويمكن ضبطها حسب أغلب مقدمات الأنمي.</string>
+    <string name="settings_skip_intro_value">%1$d ثانية</string>
+    <string name="settings_danger_zone">إدارة البيانات المحلية</string>
     <string name="settings_local_scraping_note">هذا التطبيق يعتمد على الكشط المحلي فقط ولا يستخدم أي خادم وسيط أو حسابات خارجية.</string>
     <string name="settings_version">الإصدار %1$s (%2$d)</string>
 
@@ -69,8 +97,11 @@
     <string name="details_full_story_mode">وضع القصة الكاملة</string>
     <string name="details_preference_persisted">يتم حفظ هذا التفضيل محلياً عبر DataStore.</string>
     <string name="details_alternate_titles">أسماء أخرى</string>
+    <string name="details_start_watching">ابدأ المشاهدة الآن</string>
     <string name="details_episodes_title">الحلقات</string>
     <string name="details_episodes_subtitle">تم استخراجها من بنية .video-list و .video-data في Anime3rb.</string>
+    <string name="details_episodes_empty_title">لا توجد حلقات متاحة</string>
+    <string name="details_episodes_empty">لم يتم العثور على قائمة حلقات لهذا العمل حالياً.</string>
     <string name="details_related_titles">أنميات مشابهة مقترحة</string>
     <string name="details_trailers">العروض التشويقية</string>
     <string name="details_external_sources">المصادر الخارجية</string>
@@ -84,6 +115,8 @@
     <string name="label_score">التقييم</string>
     <string name="label_episodes">الحلقات</string>
     <string name="label_age">التصنيف العمري</string>
+    <string name="label_published_at">تاريخ العرض</string>
+    <string name="label_rating_count">عدد التقييمات</string>
     <string name="label_views">مشاهدة</string>
 
     <string name="episode_row_title">الحلقة %1$d</string>
@@ -107,6 +140,8 @@
     <string name="player_source_embedded">مشغل مضمّن</string>
     <string name="player_skip_intro">تخطي المقدمة %1$dث</string>
     <string name="player_recovering_stream">جارٍ إعادة استخراج الرابط وتجربة مصدر بديل…</string>
+    <string name="player_cinema_mode_on">الوضع السينمائي مفعّل</string>
+    <string name="player_cinema_mode_off">الوضع السينمائي غير مفعّل</string>
 
     <string name="download_channel_name">تنزيلات AniStream</string>
     <string name="download_in_progress">جارٍ تنزيل الحلقة وتحويلها للاستخدام دون اتصال…</string>

@@ -5,6 +5,7 @@ import androidx.datastore.core.DataStore
 import androidx.datastore.preferences.core.Preferences
 import androidx.datastore.preferences.core.booleanPreferencesKey
 import androidx.datastore.preferences.core.edit
+import androidx.datastore.preferences.core.intPreferencesKey
 import androidx.datastore.preferences.preferencesDataStore
 import com.exapps.anistream.domain.model.UserPreferences
 import dagger.hilt.android.qualifiers.ApplicationContext
@@ -27,6 +28,7 @@ class UserPreferencesDataSource @Inject constructor(
             preferSummary = prefs[Keys.PREFER_SUMMARY] ?: false,
             cinemaMode = prefs[Keys.CINEMA_MODE] ?: false,
             dynamicColors = prefs[Keys.DYNAMIC_COLORS] ?: true,
+            skipIntroSeconds = prefs[Keys.SKIP_INTRO_SECONDS] ?: 85,
         )
     }
 
@@ -46,10 +48,15 @@ class UserPreferencesDataSource @Inject constructor(
         store.edit { it[Keys.DYNAMIC_COLORS] = enabled }
     }
 
+    suspend fun setSkipIntroSeconds(seconds: Int) {
+        store.edit { it[Keys.SKIP_INTRO_SECONDS] = seconds.coerceIn(0, 180) }
+    }
+
     private object Keys {
         val AUTO_PLAY_NEXT = booleanPreferencesKey("auto_play_next")
         val PREFER_SUMMARY = booleanPreferencesKey("prefer_summary")
         val CINEMA_MODE = booleanPreferencesKey("cinema_mode")
         val DYNAMIC_COLORS = booleanPreferencesKey("dynamic_colors")
+        val SKIP_INTRO_SECONDS = intPreferencesKey("skip_intro_seconds")
     }
 }

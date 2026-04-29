@@ -1,9 +1,13 @@
 package com.exapps.anistream.data.scraper
 
 import com.exapps.anistream.core.common.DispatcherProvider
-import com.exapps.anistream.core.webview.CloudflareChallengeSolver
+import com.exapps.anistream.core.network.CloudflareChallengeDetector
+import com.exapps.anistream.core.webview.Anime3rbSessionBridge
+import com.exapps.anistream.core.webview.VisibleCloudflareChallengeSolver
 import com.exapps.anistream.domain.model.AnimeDetails
+import com.exapps.anistream.domain.model.CatalogCategory
 import com.exapps.anistream.domain.model.CatalogFilters
+import com.exapps.anistream.domain.model.CatalogSort
 import com.exapps.anistream.domain.model.EpisodeStream
 import com.exapps.anistream.domain.model.HomeFeed
 import com.exapps.anistream.domain.model.PaginatedTitles
@@ -15,6 +19,7 @@ import okhttp3.OkHttpClient
 import okhttp3.Request
 import org.jsoup.Jsoup
 import org.jsoup.nodes.Document
+import java.net.URLEncoder
 import javax.inject.Inject
 import javax.inject.Singleton
 
@@ -24,7 +29,8 @@ class Anime3rbExtractor @Inject constructor(
     private val parser: Anime3rbHtmlParser,
     private val videoStreamResolver: VideoStreamResolver,
     private val autoFailoverPlaybackResolver: AutoFailoverPlaybackResolver,
-    private val cloudflareChallengeSolver: CloudflareChallengeSolver,
+    private val sessionBridge: Anime3rbSessionBridge,
+    private val challengeSolver: VisibleCloudflareChallengeSolver,
     private val dispatchers: DispatcherProvider,
 ) : AnimeExtractor {
 
@@ -32,35 +38,31 @@ class Anime3rbExtractor @Inject constructor(
         return parser.parseHome(fetchDocument(BASE_URL))
     }
 
+    override suspend fun getCatalog(category: CatalogCategory, page: Int, filters: CatalogFilters): PaginatedTitles {
+        val url = BASE_URL.toHttpUrl().newBuilder()
+            .addPathSegments(category.path)
+            .addCatalogFilters(page, filters)
+            .build()
+        return parser.parseCatalog(fetchDocument(url.toString()), page)
+    }
+
     override suspend fun getCatalog(page: Int, filters: CatalogFilters): PaginatedTitles {
         val url = BASE_URL.toHttpUrl().newBuilder()
             .addPathSegments("titles/list")
-            .addQueryParameter("sort_by", filters.sort.wireValue)
-            .addQueryParameter("sort_dir", filters.direction.wireValue)
-            .apply { filters.season?.let { addQueryParameter("season", it) } }
-            .apply { filters.year?.let { addQueryParameter("year", it.toString()) } }
-            .apply { filters.genreSlug?.let { addQueryParameter("genres", it) } }
-            .apply { filters.status?.let { addQueryParameter("status", it) } }
-            .apply { filters.ageRating?.let { addQueryParameter("age", it) } }
-            .apply { if (page > 1) addQueryParameter("page", page.toString()) }
+            .addCatalogFilters(page, filters)
             .build()
         return parser.parseCatalog(fetchDocument(url.toString()), page)
     }
 
     override suspend fun search(query: String, page: Int, filters: CatalogFilters): PaginatedTitles {
-        val url = BASE_URL.toHttpUrl().newBuilder()
-            .addPathSegment("search")
-            .addQueryParameter("q", query)
-            .addQueryParameter("sort_by", filters.sort.wireValue)
-            .addQueryParameter("sort_dir", filters.direction.wireValue)
-            .apply { filters.season?.let { addQueryParameter("season", it) } }
-            .apply { filters.year?.let { addQueryParameter("year", it.toString()) } }
-            .apply { filters.genreSlug?.let { addQueryParameter("genres", it) } }
-            .apply { filters.status?.let { addQueryParameter("status", it) } }
-            .apply { filters.ageRating?.let { addQueryParameter("age", it) } }
-            .apply { if (page > 1) addQueryParameter("page", page.toString()) }
-            .build()
-        return parser.parseSearch(fetchDocument(url.toString()), page)
+        val encodedQuery = URLEncoder.encode(query.trim(), Charsets.UTF_8.name())
+        val url = buildString {
+            append(BASE_URL)
+            append("/search?q=")
+            append(encodedQuery)
+            if (page > 1) append("&page=").append(page)
+        }
+        return parser.parseSearch(fetchDocument(url), page)
     }
 
     override suspend fun getAnimeDetails(slug: String): AnimeDetails {
@@ -110,7 +112,7 @@ class Anime3rbExtractor @Inject constructor(
             ?: mergedSources.firstOrNull { it.type == StreamType.MKV }?.url
 
         return parsed.copy(
-            playbackUrl = preferredPlayback ?: playbackAttempt.playbackUrl ?: parsed.playbackUrl,
+            playbackUrl = preferredPlayback ?: parsed.iframeUrl ?: playbackAttempt.playbackUrl ?: parsed.playbackUrl,
             availableSources = mergedSources,
             selectedServerId = playbackAttempt.selectedServerId ?: parsed.selectedServerId,
             attemptedServerIds = playbackAttempt.attemptedServerIds,
@@ -119,14 +121,52 @@ class Anime3rbExtractor @Inject constructor(
 
     private suspend fun fetchDocument(url: String): Document {
         return withContext(dispatchers.io) {
-            val httpUrl = url.toHttpUrl()
-            cloudflareChallengeSolver.ensureClearance(httpUrl)
+            sessionBridge.syncFromWebView()
             val request = Request.Builder().url(url).get().build()
             client.newCall(request).execute().use { response ->
-                check(response.isSuccessful) { "Request failed: ${response.code} ${response.message}" }
+                if (response.code == 403 || CloudflareChallengeDetector.isChallenge(response)) {
+                    challengeSolver.markChallengeRequired()
+                }
+                check(response.isSuccessful) {
+                    if (response.code == 403) {
+                        "Anime3rb Cloudflare session expired. Complete the verification screen, then retry."
+                    } else {
+                        "Request failed: ${response.code} ${response.message}"
+                    }
+                }
                 Jsoup.parse(response.body?.string().orEmpty(), response.request.url.toString())
             }
         }
+    }
+
+    private fun okhttp3.HttpUrl.Builder.addCatalogFilters(
+        page: Int,
+        filters: CatalogFilters,
+        includeDefaultSort: Boolean = true,
+    ): okhttp3.HttpUrl.Builder {
+        if (includeDefaultSort || filters.sort != CatalogSort.ADDITION_DATE) {
+            addQueryParameter("sort_by", filters.sort.wireValue)
+        }
+        addQueryParameter("sort_dir", filters.direction.wireValue)
+        filters.season?.let {
+            addQueryParameter("season", it)
+            addQueryParameter("release_season", it)
+        }
+        filters.year?.let {
+            addQueryParameter("year", it.toString())
+            addQueryParameter("release_year", it.toString())
+        }
+        filters.genreSlug?.let {
+            addQueryParameter("genres", it)
+            addQueryParameter("genre", it)
+        }
+        filters.status?.let { addQueryParameter("status", it) }
+        filters.ageRating?.let {
+            addQueryParameter("age", it)
+            addQueryParameter("age_ratings", it)
+        }
+        if (page > 1) addQueryParameter("page", page.toString())
+        return this
     }
 
     private companion object {

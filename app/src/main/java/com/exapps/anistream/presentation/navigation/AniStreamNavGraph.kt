@@ -20,17 +20,23 @@ import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
+import androidx.navigation.toRoute
+import androidx.media3.common.util.UnstableApi
 import com.exapps.anistream.R
+import com.exapps.anistream.presentation.catalog.CatalogScreen
+import com.exapps.anistream.presentation.catalog.CatalogViewModel
 import com.exapps.anistream.presentation.dashboard.DashboardScreen
 import com.exapps.anistream.presentation.dashboard.DashboardViewModel
 import com.exapps.anistream.presentation.details.DetailsScreen
 import com.exapps.anistream.presentation.details.DetailsViewModel
+import com.exapps.anistream.presentation.cloudflare.Anime3rbSessionScreen
 import com.exapps.anistream.presentation.library.LibraryScreen
 import com.exapps.anistream.presentation.library.LibraryViewModel
 import com.exapps.anistream.presentation.player.PlayerScreen
 import com.exapps.anistream.presentation.player.PlayerViewModel
 import com.exapps.anistream.presentation.settings.SettingsScreen
 import com.exapps.anistream.presentation.settings.SettingsViewModel
+import com.exapps.anistream.presentation.trailer.TrailerScreen
 
 private enum class RootNavTarget {
     HOME,
@@ -45,7 +51,20 @@ private data class RootDestination(
 )
 
 @Composable
+@UnstableApi
 fun AniStreamNavGraph() {
+    AniStreamNavGraph(
+        needsAnime3rbSession = false,
+        onAnime3rbSessionReady = {},
+    )
+}
+
+@Composable
+@UnstableApi
+fun AniStreamNavGraph(
+    needsAnime3rbSession: Boolean,
+    onAnime3rbSessionReady: (String?) -> Unit,
+) {
     val navController = rememberNavController()
     val backStackEntry by navController.currentBackStackEntryAsState()
     val destination = backStackEntry?.destination
@@ -55,13 +74,14 @@ fun AniStreamNavGraph() {
         RootDestination(RootNavTarget.SETTINGS, R.string.nav_settings) { Icon(Icons.Rounded.Settings, contentDescription = null) },
     )
 
-    val showBottomBar = rootDestinations.any { root ->
-        when (root.target) {
-            RootNavTarget.HOME -> destination?.hasRoute<DashboardRoute>() == true
-            RootNavTarget.LIBRARY -> destination?.hasRoute<LibraryRoute>() == true
-            RootNavTarget.SETTINGS -> destination?.hasRoute<SettingsRoute>() == true
+    val showBottomBar = !needsAnime3rbSession &&
+        rootDestinations.any { root ->
+            when (root.target) {
+                RootNavTarget.HOME -> destination?.hasRoute<DashboardRoute>() == true
+                RootNavTarget.LIBRARY -> destination?.hasRoute<LibraryRoute>() == true
+                RootNavTarget.SETTINGS -> destination?.hasRoute<SettingsRoute>() == true
+            }
         }
-    }
 
     Scaffold(
         bottomBar = {
@@ -104,67 +124,96 @@ fun AniStreamNavGraph() {
             }
         },
     ) { innerPadding ->
-        NavHost(
-            navController = navController,
-            startDestination = DashboardRoute,
-            modifier = Modifier.padding(innerPadding),
-        ) {
-            composable<DashboardRoute> {
-                val viewModel = hiltViewModel<DashboardViewModel>()
-                DashboardScreen(
-                    viewModel = viewModel,
-                    onOpenDetails = { slug -> navController.navigate(DetailsRoute(slug = slug)) },
-                    onOpenEpisode = { titleSlug, episodeNumber ->
-                        navController.navigate(
-                            PlayerRoute(titleSlug = titleSlug, episodeNumber = episodeNumber),
-                        )
-                    },
-                )
-            }
+        if (needsAnime3rbSession) {
+            Anime3rbSessionScreen(
+                modifier = Modifier.padding(innerPadding),
+                onSessionReady = onAnime3rbSessionReady,
+            )
+        } else {
+            NavHost(
+                navController = navController,
+                startDestination = DashboardRoute,
+                modifier = Modifier.padding(innerPadding),
+            ) {
+                composable<DashboardRoute> {
+                    val viewModel = hiltViewModel<DashboardViewModel>()
+                    DashboardScreen(
+                        viewModel = viewModel,
+                        onOpenDetails = { slug -> navController.navigate(DetailsRoute(slug = slug)) },
+                        onOpenEpisode = { titleSlug, episodeNumber ->
+                            navController.navigate(
+                                PlayerRoute(titleSlug = titleSlug, episodeNumber = episodeNumber),
+                            )
+                        },
+                        onOpenCatalog = { category -> navController.navigate(CatalogRoute(categoryPath = category.path)) },
+                    )
+                }
 
-            composable<LibraryRoute> {
-                val viewModel = hiltViewModel<LibraryViewModel>()
-                LibraryScreen(
-                    viewModel = viewModel,
-                    onOpenDetails = { slug -> navController.navigate(DetailsRoute(slug = slug)) },
-                    onOpenEpisode = { titleSlug, episodeNumber ->
-                        navController.navigate(
-                            PlayerRoute(titleSlug = titleSlug, episodeNumber = episodeNumber),
-                        )
-                    },
-                )
-            }
+                composable<CatalogRoute> {
+                    val viewModel = hiltViewModel<CatalogViewModel>()
+                    CatalogScreen(
+                        viewModel = viewModel,
+                        onBack = navController::popBackStack,
+                        onOpenDetails = { slug -> navController.navigate(DetailsRoute(slug = slug)) },
+                    )
+                }
 
-            composable<SettingsRoute> {
-                val viewModel = hiltViewModel<SettingsViewModel>()
-                SettingsScreen(viewModel = viewModel)
-            }
+                composable<LibraryRoute> {
+                    val viewModel = hiltViewModel<LibraryViewModel>()
+                    LibraryScreen(
+                        viewModel = viewModel,
+                        onOpenDetails = { slug -> navController.navigate(DetailsRoute(slug = slug)) },
+                        onOpenEpisode = { titleSlug, episodeNumber ->
+                            navController.navigate(
+                                PlayerRoute(titleSlug = titleSlug, episodeNumber = episodeNumber),
+                            )
+                        },
+                    )
+                }
 
-            composable<DetailsRoute> {
-                val viewModel = hiltViewModel<DetailsViewModel>()
-                DetailsScreen(
-                    viewModel = viewModel,
-                    onBack = navController::popBackStack,
-                    onPlayEpisode = { titleSlug, episodeNumber ->
-                        navController.navigate(
-                            PlayerRoute(titleSlug = titleSlug, episodeNumber = episodeNumber),
-                        )
-                    },
-                    onOpenDetails = { slug -> navController.navigate(DetailsRoute(slug = slug)) },
-                )
-            }
+                composable<SettingsRoute> {
+                    val viewModel = hiltViewModel<SettingsViewModel>()
+                    SettingsScreen(viewModel = viewModel)
+                }
 
-            composable<PlayerRoute> {
-                val viewModel = hiltViewModel<PlayerViewModel>()
-                PlayerScreen(
-                    viewModel = viewModel,
-                    onBack = navController::popBackStack,
-                    onOpenEpisode = { titleSlug, episodeNumber ->
-                        navController.navigate(
-                            PlayerRoute(titleSlug = titleSlug, episodeNumber = episodeNumber),
-                        )
-                    },
-                )
+                composable<DetailsRoute> {
+                    val viewModel = hiltViewModel<DetailsViewModel>()
+                    DetailsScreen(
+                        viewModel = viewModel,
+                        onBack = navController::popBackStack,
+                        onPlayEpisode = { titleSlug, episodeNumber ->
+                            navController.navigate(
+                                PlayerRoute(titleSlug = titleSlug, episodeNumber = episodeNumber),
+                            )
+                        },
+                        onOpenDetails = { slug -> navController.navigate(DetailsRoute(slug = slug)) },
+                        onPlayTrailer = { trailer ->
+                            navController.navigate(TrailerRoute(title = trailer.title, embedUrl = trailer.embedUrl))
+                        },
+                    )
+                }
+
+                composable<PlayerRoute> {
+                    val viewModel = hiltViewModel<PlayerViewModel>()
+                    PlayerScreen(
+                        viewModel = viewModel,
+                        onBack = navController::popBackStack,
+                        onOpenEpisode = { titleSlug, episodeNumber ->
+                            navController.navigate(
+                                PlayerRoute(titleSlug = titleSlug, episodeNumber = episodeNumber),
+                            )
+                        },
+                    )
+                }
+
+                composable<TrailerRoute> { backStackEntry ->
+                    val route = backStackEntry.toRoute<TrailerRoute>()
+                    TrailerScreen(
+                        title = route.title,
+                        embedUrl = route.embedUrl,
+                        onBack = navController::popBackStack,
+                    )
+                }
             }
         }
     }

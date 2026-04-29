@@ -1,6 +1,10 @@
 package com.exapps.anistream.presentation.player
 
 import android.view.ViewGroup.LayoutParams.MATCH_PARENT
+import android.webkit.WebChromeClient
+import android.webkit.WebSettings
+import android.webkit.WebView
+import android.webkit.WebViewClient
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -48,6 +52,7 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.media3.common.MediaItem
 import androidx.media3.common.PlaybackException
 import androidx.media3.common.Player
+import androidx.media3.common.util.UnstableApi
 import androidx.media3.datasource.DefaultHttpDataSource
 import androidx.media3.exoplayer.ExoPlayer
 import androidx.media3.ui.AspectRatioFrameLayout
@@ -58,6 +63,7 @@ import com.exapps.anistream.data.download.AnimeDownloadService
 import com.exapps.anistream.domain.model.StreamType
 
 @Composable
+@UnstableApi
 @OptIn(ExperimentalLayoutApi::class, ExperimentalMaterial3Api::class)
 fun PlayerScreen(
     viewModel: PlayerViewModel,
@@ -106,16 +112,17 @@ fun PlayerScreen(
 
             else -> {
                 val stream = state.stream!!
+                val playerHeight = if (state.cinemaMode) 320.dp else 240.dp
                 val playableSources = stream.availableSources.filter {
                     it.type == StreamType.HLS || it.type == StreamType.MP4 || it.type == StreamType.MKV
                 }
+                val embeddedPlayerUrl = stream.availableSources
+                    .firstOrNull { it.type == StreamType.PLAYER_PAGE && it.url.isNotBlank() }
+                    ?.url
+                    ?: stream.iframeUrl
+                    ?: stream.playbackUrl?.takeUnless { it.contains(".m3u8") || it.contains(".mp4") || it.contains(".mkv") }
                 var selectedUrl by rememberSaveable(stream.titleSlug, stream.episodeNumber, stream.playbackUrl, stream.selectedServerId) {
-                    mutableStateOf(
-                        playableSources.firstOrNull()?.url
-                            ?: stream.playbackUrl?.takeIf {
-                                it.contains(".m3u8") || it.contains(".mp4") || it.contains(".mkv")
-                            },
-                    )
+                    mutableStateOf<String?>(null)
                 }
 
                 val context = LocalContext.current
@@ -180,21 +187,55 @@ fun PlayerScreen(
                             colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
                         ) {
                             Column(modifier = Modifier.padding(12.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
-                                if (selectedUrl != null) {
-                                    AndroidView(
-                                        modifier = Modifier
-                                            .fillMaxWidth()
-                                            .height(240.dp),
-                                        factory = { ctx ->
-                                            PlayerView(ctx).apply {
-                                                layoutParams = android.view.ViewGroup.LayoutParams(MATCH_PARENT, MATCH_PARENT)
-                                                useController = true
-                                                resizeMode = AspectRatioFrameLayout.RESIZE_MODE_FIT
-                                                player = exoPlayer
-                                            }
-                                        },
-                                        update = { view -> view.player = exoPlayer },
-                                    )
+                                when {
+                                    selectedUrl != null -> {
+                                        AndroidView(
+                                            modifier = Modifier
+                                                .fillMaxWidth()
+                                                .height(playerHeight),
+                                            factory = { ctx ->
+                                                PlayerView(ctx).apply {
+                                                    layoutParams = android.view.ViewGroup.LayoutParams(MATCH_PARENT, MATCH_PARENT)
+                                                    useController = true
+                                                    resizeMode = AspectRatioFrameLayout.RESIZE_MODE_FIT
+                                                    player = exoPlayer
+                                                }
+                                            },
+                                            update = { view -> view.player = exoPlayer },
+                                        )
+                                    }
+
+                                    !embeddedPlayerUrl.isNullOrBlank() -> {
+                                        AndroidView(
+                                            modifier = Modifier
+                                                .fillMaxWidth()
+                                                .height(playerHeight),
+                                            factory = { ctx ->
+                                                WebView(ctx).apply {
+                                                    settings.javaScriptEnabled = true
+                                                    settings.domStorageEnabled = true
+                                                    settings.mediaPlaybackRequiresUserGesture = false
+                                                    settings.cacheMode = WebSettings.LOAD_DEFAULT
+                                                    webChromeClient = WebChromeClient()
+                                                    webViewClient = WebViewClient()
+                                                    loadUrl(embeddedPlayerUrl)
+                                                }
+                                            },
+                                            update = { webView ->
+                                                if (webView.url != embeddedPlayerUrl) {
+                                                    webView.loadUrl(embeddedPlayerUrl)
+                                                }
+                                            },
+                                        )
+                                    }
+
+                                    else -> {
+                                        Text(
+                                            text = stringResource(id = R.string.player_empty),
+                                            style = MaterialTheme.typography.bodyMedium,
+                                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                        )
+                                    }
                                 }
 
                                 Text(
@@ -211,12 +252,24 @@ fun PlayerScreen(
                                 }
 
                                 if (stream.views != null) {
-                                    Text(
-                                        text = "${stream.views} ${stringResource(id = R.string.label_views)}",
-                                        style = MaterialTheme.typography.bodyMedium,
-                                        color = MaterialTheme.colorScheme.primary,
+                                    AssistChip(
+                                        onClick = {},
+                                        label = { Text("${stream.views} ${stringResource(id = R.string.label_views)}") },
                                     )
                                 }
+
+                                AssistChip(
+                                    onClick = {},
+                                    label = {
+                                        Text(
+                                            if (state.cinemaMode) {
+                                                stringResource(id = R.string.player_cinema_mode_on)
+                                            } else {
+                                                stringResource(id = R.string.player_cinema_mode_off)
+                                            },
+                                        )
+                                    },
+                                )
 
                                 if (stream.batchDownloadUrl != null) {
                                     AssistChip(
@@ -268,12 +321,18 @@ fun PlayerScreen(
                         }
                     }
 
-                    if (playableSources.isNotEmpty()) {
+                    if (playableSources.isNotEmpty() || !embeddedPlayerUrl.isNullOrBlank()) {
                         item {
                             Text(text = stringResource(id = R.string.player_sources_title), style = MaterialTheme.typography.titleMedium)
                         }
                         item {
                             FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                                if (!embeddedPlayerUrl.isNullOrBlank()) {
+                                    AssistChip(
+                                        onClick = { selectedUrl = null },
+                                        label = { Text(stringResource(id = R.string.player_source_embedded)) },
+                                    )
+                                }
                                 playableSources.forEach { source ->
                                     AssistChip(
                                         onClick = { selectedUrl = source.url },

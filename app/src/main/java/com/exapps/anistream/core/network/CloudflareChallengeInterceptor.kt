@@ -1,7 +1,6 @@
 package com.exapps.anistream.core.network
 
 import com.exapps.anistream.core.webview.CloudflareChallengeSolver
-import kotlinx.coroutines.runBlocking
 import okhttp3.Interceptor
 import okhttp3.Response
 import javax.inject.Inject
@@ -21,9 +20,7 @@ class CloudflareChallengeInterceptor @Inject constructor(
         }
 
         response.close()
-        runBlocking {
-            solver.ensureClearance(request.url)
-        }
+        solver.markChallengeRequired()
 
         return chain.proceed(
             request.newBuilder()

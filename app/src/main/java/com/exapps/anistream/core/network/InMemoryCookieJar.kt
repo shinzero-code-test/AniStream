@@ -11,6 +11,7 @@ interface MutableCookieStore {
     fun saveFromResponse(url: HttpUrl, cookies: List<Cookie>)
     fun loadForRequest(url: HttpUrl): List<Cookie>
     fun saveFromHeader(url: HttpUrl, cookieHeader: String)
+    fun hasCookies(url: HttpUrl): Boolean
 }
 
 @Singleton
@@ -62,4 +63,6 @@ class InMemoryCookieJar @Inject constructor() : CookieJar, MutableCookieStore {
 
         saveFromResponse(url, cookies)
     }
+
+    override fun hasCookies(url: HttpUrl): Boolean = loadForRequest(url).isNotEmpty()
 }

@@ -27,6 +27,27 @@ data class CatalogFilters(
     val ageRating: String? = null,
 )
 
+enum class CatalogCategory(val path: String, val label: String) {
+    ALL("titles/list", "قائمة الأنمي"),
+    TV("titles/list/tv", "مسلسلات الأنمي"),
+    MOVIE("titles/list/movie", "أفلام الأنمي"),
+    OVA("titles/list/ova", "الأوفا"),
+    ONA("titles/list/ona", "الأونا"),
+    SPECIAL("titles/list/special", "الحلقات الخاصة"),
+    TV_SPECIAL("titles/list/tv-special", "حلقات تلفزيونية خاصة"),
+    PV("titles/list/pv", "عروض ترويجية"),
+    CM("titles/list/cm", "إعلانات"),
+    MUSIC("titles/list/music", "موسيقى"),
+    OTHER("titles/list/other", "أخرى"),
+    ;
+
+    companion object {
+        fun fromPath(path: String): CatalogCategory {
+            return entries.firstOrNull { it.path == path } ?: ALL
+        }
+    }
+}
+
 enum class CatalogSort(val wireValue: String) {
     ADDITION_DATE("addition_date"),
     NAME("name"),
@@ -75,6 +96,8 @@ data class AnimeDetails(
     val author: String? = null,
     val ageRating: String? = null,
     val score: String? = null,
+    val ratingCount: Int? = null,
+    val publishedAt: String? = null,
     val episodeCount: Int? = null,
     val synopsis: String = "",
     val summary: String? = null,
@@ -119,6 +142,12 @@ data class ExternalLink(
 
 @Immutable
 data class TrailerItem(
+    val title: String,
+    val embedUrl: String,
+)
+
+@Immutable
+data class TrailerRouteArgs(
     val title: String,
     val embedUrl: String,
 )
@@ -174,6 +203,7 @@ data class UserPreferences(
     val preferSummary: Boolean = false,
     val cinemaMode: Boolean = false,
     val dynamicColors: Boolean = true,
+    val skipIntroSeconds: Int = 85,
 )
 
 enum class StreamType {

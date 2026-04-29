@@ -3,6 +3,7 @@ package com.exapps.anistream.presentation.dashboard
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.exapps.anistream.domain.model.AnimeCard
+import com.exapps.anistream.domain.model.CatalogCategory
 import com.exapps.anistream.domain.model.CatalogFilters
 import com.exapps.anistream.domain.model.CatalogSort
 import com.exapps.anistream.domain.model.EpisodeCard
@@ -105,6 +106,7 @@ class DashboardViewModel @Inject constructor(
                         catalog = (it.catalog + page.items).distinctBy(AnimeCard::slug),
                         catalogPage = page.currentPage,
                         hasMoreCatalog = page.hasNextPage,
+                        errorMessage = null,
                     )
                 }
             }.onFailure { error ->
@@ -150,6 +152,7 @@ class DashboardViewModel @Inject constructor(
                         isSearching = false,
                         searchPage = result.currentPage,
                         hasMoreSearchResults = result.hasNextPage,
+                        errorMessage = null,
                     )
                 }
             }.onFailure { error ->
@@ -182,6 +185,7 @@ class DashboardViewModel @Inject constructor(
                         searchResults = (it.searchResults + result.items).distinctBy(AnimeCard::slug),
                         searchPage = result.currentPage,
                         hasMoreSearchResults = result.hasNextPage,
+                        errorMessage = null,
                     )
                 }
             }.onFailure { error ->
@@ -228,6 +232,7 @@ data class DashboardUiState(
     val searchResults: List<AnimeCard> = emptyList(),
     val searchPage: Int = 1,
     val hasMoreSearchResults: Boolean = false,
+    val catalogCategories: List<CatalogCategory> = CatalogCategory.entries,
     val catalogFilters: CatalogFilters = CatalogFilters(),
     val errorMessage: String? = null,
 )
